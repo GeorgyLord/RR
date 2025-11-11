@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отображение CSV в Django</title>
+    <style>
+        /* Базовые стили для оформления таблицы */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f7f9;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #334155;
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            border-radius: 8px;
+            overflow: hidden; /* Важно для скругления углов таблицы */
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background-color: #0d9488; /* Бирюзовый фон для заголовка */
+            color: #ffffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+        tr:nth-child(even) {
+            background-color: #f8fafc; /* Светлый фон для четных строк */
+        }
+        tr:hover {
+            background-color: #e0f2f1; /* Эффект при наведении */
+            transition: background-color 0.3s ease;
+        }
+        .error-message {
+            color: #ef4444;
+            background-color: #fee2e2;
+            padding: 15px;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            text-align: left;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Данные из CSV-файла</h1>
+
+        {% if status == 'error' %}
+            <div class="error-message">
+                <h2>Произошла ошибка!</h2>
+                <p>{{ message }}</p>
+                <p>Пожалуйста, проверьте путь к файлу и его кодировку.</p>
+            </div>
+        {% elif header and rows %}
+            <table>
+                <thead>
+                    <tr>
+                        {# Выводим заголовки таблицы #}
+                        {% for col_name in header %}
+                            <th>{{ col_name }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {# Выводим строки данных #}
+                    {% for row in rows %}
+                        <tr>
+                            {% for cell in row %}
+                                <td>{{ cell }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+             <div class="error-message" style="background-color: #ffedd5; color: #f97316; border-color: #fed7aa;">
+                <h2>Нет данных</h2>
+                <p>CSV-файл пуст или не содержит корректных данных для отображения.</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
