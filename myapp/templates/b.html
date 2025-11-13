@@ -22,8 +22,13 @@
 
 <body>
     <div class="a">
-        <div class="q"><img src={{Images_recipe}} alt=""></div>
+        <!-- <div class="q">Images_recipe</div> -->
+        {% if Images_recipe %}
+            <img width="300px" src="{{Images_recipe}}" alt="">
+        {% endif %}
+        
         <div class="q">Название: {{Name_recipe}}</div>
+
         <div class="q">Описание: {{Description}}</div>
         <div class="q">Автор: {{Author}}</div>
         <div class="q">Время приготовления: {{Cooking_time}}</div>

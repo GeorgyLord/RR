@@ -5,10 +5,13 @@ from django.conf import settings
 from django.http import HttpResponse
 import pandas as pd
 from django.template import loader
+
+import ast
   
   
 def home(request):
-    return HttpResponse("<h1>ПРИВЕТ</h1>")
+    return render(request, 'home/home.html')
+    # return HttpResponse("<h1>ПРИВЕТ</h1>")
 
 def index(request):
     import test_10_best
@@ -24,6 +27,11 @@ def card(request, id):
     df = pd.read_csv('dataset/data.csv')
     df_id = df[df['id']==id].iloc[0]
     context = df_id.to_dict()
+    if context["Images_recipe"] != '[]':
+        context['Images_recipe'] = ast.literal_eval(context['Images_recipe'])[0][1]
+    else:
+        context['Images_recipe']
+    # print('[!!]', ast.literal_eval(context['Images_recipe'])[0][1])
     # context = {
     #     'Name_recipe': df_id['Name_recipe'].iloc[0],
     #     'Description': df_id['Description'].iloc[0],
@@ -43,7 +51,7 @@ def card(request, id):
     #     'Carbohydrates': df_id['Carbohydrates'].iloc[0],
     #            }
     return HttpResponse(template.render(context, request))
-    return HttpResponse(f"<h1>Имя: {name}</h1>")
+    # return HttpResponse(f"<h1>Имя: {name}</h1>")
 
 # def card(request):
 #     return render(request, 'b.html')

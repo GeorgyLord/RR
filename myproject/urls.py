@@ -23,5 +23,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # path('', views.csv_display_view),
     # path('', views.index, name='home'),
-    path("<int:id>", views.card),
+    path("recipe/<int:id>", views.card),
 ]
