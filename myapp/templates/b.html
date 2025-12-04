@@ -1,3 +1,5 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -17,14 +19,25 @@
         .q {
             margin-top: 10px;
         }
+        .btn {
+            width: 150px;
+            height: 50px;
+            /* position: absolute; */
+            opacity: 0.5;
+            /* margin-left: 45%; */
+            margin-top: 30px;
+            margin-bottom: 40px;
+            /* position: sticky; */
+        }
     </style>
 </head>
 
 <body>
     <div class="a">
+        <button class="btn" onclick="window.history.back()">← Назад</button><br>
         <!-- <div class="q">Images_recipe</div> -->
         {% if Images_recipe %}
-            <img width="300px" src="{{Images_recipe}}" alt="">
+            <img width="200px" height="120px" src="{% static Images_recipe %}" alt="">
         {% endif %}
         
         <div class="q">Название: {{Name_recipe}}</div>

@@ -1,11 +1,101 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        header {
+            width: 100%;
+            height: 60px;
+            background-color: rgb(225, 225, 225);
+            display: flex;
+            position: sticky;
+            top: 0;
+        }
+
+        main {
+            /* padding: 50px; */
+            display: flex;
+        }
+
+        .header_block {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            max-width: 200px;
+            height: 100%;
+        }
+
+        .block {
+            padding-left: 50px;
+            padding-right: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cards {
+            display: flex;
+            flex-wrap: wrap;
+            /* justify-content: center; */
+            width: 100%;
+            height: 100%;
+            /* width: 50%; */
+            /* max-width: 40%; */
+        }
+
+        .card {
+            border: 2px solid black;
+            padding: 20px;
+            margin: 20px;
+        }
+        img {
+            width: 200px;
+            height: 120px;
+            border: 1px solid rgb(178, 178, 178);
+        }
+
+        /* h3{
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        } */
+    </style>
 </head>
+
 <body>
-    fewf
+    <header>
+        <div class="header_block">
+            <a class="block" href="/settings">Настройки</a>
+        </div>
+    </header>
+    <main>
+        <!-- {{card_recipe.0}} -->
+        <div class="cards">
+            {% for i in card_recipe %}
+            <div class="card">
+                <a href="/recipe/{{i.0}}">{{i.0}}</a>
+                <br>
+                <!-- <div>images/not_image/not_image_recipe.png</div> -->
+                {% if i.1 is not None %}
+                    <!-- {{i.1}} -->
+                    <img src="{% static i.1 %}" alt="">
+                {% else %}
+                    <div>НЕТ ФОТО</div>
+                    <img src="{% static 'images/not_image/not_image_recipe.png' %}" alt="">
+                {% endif %}
+                <h3>{{i.2}}</h3>
+            </div>
+            {% endfor%}
+        </div>
+    </main>
 </body>
+
 </html>

@@ -20,6 +20,7 @@ from myapp import views
 
 urlpatterns = [
     path('', views.home),
+    path('settings/', views.settings),
     path('admin/', admin.site.urls),
     # path('', views.csv_display_view),
     # path('', views.index, name='home'),

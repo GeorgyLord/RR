@@ -1,3 +1,30 @@
 from django.db import models
 
 # Create your models here.
+
+
+class Recipe(models.Model):
+    id = models.CharField()
+    URL = models.CharField()
+    Name_recipe = models.CharField()
+    Description = models.CharField()
+    Author = models.CharField()
+    Cooking_time = models.CharField()
+    Likes = models.CharField()
+    Dislikes = models.CharField()
+    Safes = models.CharField()
+    Type_recipe = models.CharField()
+    Tags = models.CharField()
+    Count_ingredients = models.CharField()
+    Ingredients = models.CharField()
+    Pontions = models.CharField()
+    Calorie_content = models.CharField()
+    Squirrels = models.CharField()
+    Fats = models.CharField()
+    Carbohydrates = models.CharField()
+    Steps_text = models.CharField()
+    Steps_images = models.CharField()
+    Url_steps_images = models.CharField()
+    Images_recipe = models.CharField()
+    Url_images_recipe = models.CharField()
+    Number_page = models.CharField()
