@@ -1,10 +1,15 @@
 from django.db import models
 
 # Create your models here.
-
+ 
+class Person(models.Model):
+    name = models.CharField(max_length=20)
+    email = models.CharField(max_length=30)
+    password = models.CharField(max_length=30)
+    age = models.IntegerField()
 
 class Recipe(models.Model):
-    Id = models.IntegerField()
+    Id_Recipe = models.IntegerField(null=True)
     URL = models.CharField()
     Name_recipe = models.CharField()
     Description = models.CharField()

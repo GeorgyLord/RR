@@ -19,10 +19,13 @@ from django.urls import path
 from myapp import views
 
 urlpatterns = [
-    path('', views.home),
-    path('settings/', views.settings),
-    path('admin/', admin.site.urls),
+    # path('', views.home),
+    # path('settings/', views.settings),
+    # path('admin/', admin.site.urls),
+    
     # path('', views.csv_display_view),
     # path('', views.index, name='home'),
-    path("recipe/<int:id>", views.card),
+    
+    # path("recipe/<int:id>", views.card),
+    path('admin/', admin.site.urls),
 ]

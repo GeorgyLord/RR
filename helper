@@ -6,6 +6,8 @@ python manage.py runserver
 
 python manage.py makemigrations
 
+python manage.py migrate
+
 
 source .venv/Scripts/activate
 
@@ -22,3 +24,10 @@ pip list
 
 # Посмотреть версию Python
 python --version
+
+
+# Создание суперпользователя
+python manage.py createsuperuser
+
+# Аутивация окружения
+.venv\Scripts\activate
