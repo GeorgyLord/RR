@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        form {
+            display: block;
+            flex-wrap: wrap;
+        }
+
+        input {
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+
+        button {
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Регистрация</h2>
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Поле имени с ошибкой -->
+        <div>
+            <label>Имя:</label>
+            <input type="text" name="name_input" value="{{ name_input|default:'' }}">
+            {% if errors.name %}
+            <div style="color: red;">{{ errors.name }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Поле email -->
+        <div>
+            <label>Email:</label>
+            <input type="text" name="email_input" value="{{ email_input|default:'' }}">
+            {% if errors.email %}
+            <div style="color: red;">{{ errors.email }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Поле пароля -->
+        <div>
+            <label>Пароль:</label>
+            <input type="password" name="password_input">
+            {% if errors.password %}
+            <div style="color: red;">{{ errors.password }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Общие ошибки -->
+        {% if errors %}
+        <div style="color: red; background: #ffe6e6; padding: 10px;">
+            <ul>
+                {% for error in errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Сообщения Django -->
+        {% if messages %}
+        <div>
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <button type="submit">Зарегистрироваться</button>
+
+        <div style="margin-top: 20px;">
+            <a href="{% url 'login' %}">Войти</a>
+        </div>
+    </form>
+</body>
+
+</html>

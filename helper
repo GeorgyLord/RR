@@ -1,3 +1,6 @@
+# Аутивация окружения
+.venv\Scripts\activate
+
 # Создание Django-проекта
 django-admin startproject myproject
 
@@ -28,6 +31,3 @@ python --version
 
 # Создание суперпользователя
 python manage.py createsuperuser
-
-# Аутивация окружения
-.venv\Scripts\activate

@@ -8,56 +8,73 @@ from django.template import loader
 from test_10_best import start_fun
 import ast
 import json
-  
+from django.shortcuts import render, redirect
+from django.contrib.auth import login, logout, authenticate
+from django.contrib import messages
+from .forms import RegisterForm, LoginForm
+from .models import CustomUser
+from django.db.models import Q
+# from .models import MyUser
+
+class MyUser():
+    def __init__(self):
+        pass
+
 # cur_per_id = 71
 # tdf = start_fun(cur_per_id, 10)
-# with open("images_to_local.json", "r") as f:
-#     file_data_images_to_local = json.load(f)
+with open("images_to_local.json", "r") as f:
+    file_data_images_to_local = json.load(f)
 
 
-# def home(request):
-#     tls = tdf['id'].tolist()
-#     context = {}
-#     df_data = pd.read_csv('dataset/data.csv')
-#     list_link_for_images_recipes = []
-#     for i in range(len(tls)):
-#         temp_list = [tls[i]]
-#         if df_data[df_data['id']==tls[i]].iloc[0]['Images_recipe'] != '[]':
-#             df_id = ast.literal_eval(df_data[df_data['id']==tls[i]].iloc[0]['Images_recipe'])[0][1]
-#             # print(f'images/images/{file_data_images_to_local.get(df_id)}')
-#             if file_data_images_to_local.get(df_id) == None:
-#                 temp_list.append(None)
-#             else:
-#                 temp_list.append(f'images/images/{file_data_images_to_local.get(df_id)}')
-#         df_name_recipe = df_data[df_data['id']==tls[i]].iloc[0]['Name_recipe'] # Name_recipe
-#         temp_list.append(df_name_recipe)
-#         list_link_for_images_recipes.append(temp_list)
+def home_index(request):
+    cur_per_id = request.session.get('user_id')
+    tdf = start_fun(cur_per_id, 10)
     
-#     context['card_recipe']=list_link_for_images_recipes
-#     template = loader.get_template('home/home.html')
-#     return HttpResponse(template.render(context, request))
-#     # return render(request, 'home/home.html')
-#     # return HttpResponse("<h1>ПРИВЕТ</h1>")
+    tls = tdf['id'].tolist()
+    context = {}
+    df_data = pd.read_csv('dataset/data.csv')
+    list_link_for_images_recipes = []
+    for i in range(len(tls)):
+        temp_list = [tls[i]]
+        if df_data[df_data['id']==tls[i]].iloc[0]['Images_recipe'] != '[]':
+            df_id = ast.literal_eval(df_data[df_data['id']==tls[i]].iloc[0]['Images_recipe'])[0][1]
+            # print(f'images/images/{file_data_images_to_local.get(df_id)}')
+            if file_data_images_to_local.get(df_id) == None:
+                temp_list.append(None)
+            else:
+                temp_list.append(f'images/images/{file_data_images_to_local.get(df_id)}')
+        df_name_recipe = df_data[df_data['id']==tls[i]].iloc[0]['Name_recipe'] # Name_recipe
+        temp_list.append(df_name_recipe)
+        list_link_for_images_recipes.append(temp_list)
 
-# def settings(request):
-#     template = loader.get_template('settings/settings.html')
-#     df_data = pd.read_csv('dataset/data.csv')
-#     df_interaction = pd.read_csv('dataset/interaction.csv')
-#     # print(df_interaction[df_interaction['user_id']==cur_per_id])
-#     intranction_current_person = df_interaction[df_interaction['user_id']==cur_per_id]
-#     list_neg = intranction_current_person[intranction_current_person['interaction'] == -1]['item_id'].tolist()
-#     list_pos = intranction_current_person[intranction_current_person['interaction'] == 1]['item_id'].tolist()
-#     # df_interaction_current_person = list(df_interaction[df_interaction['user_id']==71]['item_id'])
-#     # print(df_interaction_current_person)
-#     print(intranction_current_person)
-#     print(list_neg, list_pos)
-#     id_list_likes_recipes = {
-#         "list_neg":list_neg,
-#         "list_pos":list_pos,
-#         }
-#     context = id_list_likes_recipes
-#     return HttpResponse(template.render(context, request))
-#     # return render(request, 'settings/settings.html')
+    context['card_recipe']=list_link_for_images_recipes
+    template = loader.get_template('home/home.html')
+    return HttpResponse(template.render(context, request))
+    # return render(request, 'home/home.html')
+    # return HttpResponse("<h1>ПРИВЕТ</h1>")
+
+def settings(request):
+    cur_per_id = request.session.get('user_id')
+    
+    template = loader.get_template('settings/settings.html')
+    df_data = pd.read_csv('dataset/data.csv')
+    df_interaction = pd.read_csv('dataset/interaction.csv')
+    # print(df_interaction[df_interaction['user_id']==cur_per_id])
+    intranction_current_person = df_interaction[df_interaction['user_id']==cur_per_id]
+    list_neg = intranction_current_person[intranction_current_person['interaction'] == -1]['item_id'].tolist()
+    list_pos = intranction_current_person[intranction_current_person['interaction'] == 1]['item_id'].tolist()
+    # df_interaction_current_person = list(df_interaction[df_interaction['user_id']==71]['item_id'])
+    # print(df_interaction_current_person)
+    print(intranction_current_person)
+    print(list_neg, list_pos)
+    id_list_likes_recipes = {
+        'id_user':cur_per_id,
+        "list_neg":list_neg,
+        "list_pos":list_pos,
+        }
+    context = id_list_likes_recipes
+    return HttpResponse(template.render(context, request))
+    # return render(request, 'settings/settings.html')
 
 # def index(request):
 #     import test_10_best
@@ -68,44 +85,44 @@ import json
 #     # return render(request, 'a.html')
 #     return HttpResponse(df.to_html())
 
-# def card(request, id):
-#     template = loader.get_template('b.html')
-#     df = pd.read_csv('dataset/data.csv')
-#     df_id = df[df['id']==id].iloc[0]
-#     context = df_id.to_dict()
-#     if context["Images_recipe"] != '[]':
-#         context['Images_recipe'] = ast.literal_eval(context['Images_recipe'])[0][1]
-#         # temp_image_recipe = context['Images_recipe']
-#         # print(df['id'])
-#         local_link = file_data_images_to_local.get(context['Images_recipe'])
-#         # print(local_link)
-#         if local_link != None:
-#             context['Images_recipe'] = 'images/images/'+local_link
-#         else:
-#             context['Images_recipe'] = 'images/not_image/not_image_recipe.png'
-#     else:
-#         context['Images_recipe'] = 'images/not_image/not_image_recipe.png'
-#     # print('[!!]', ast.literal_eval(context['Images_recipe'])[0][1])
-#     # context = {
-#     #     'Name_recipe': df_id['Name_recipe'].iloc[0],
-#     #     'Description': df_id['Description'].iloc[0],
-#     #     "Author": df_id['Author'].iloc[0],
-#     #     "Cooking_time": df_id['Cooking_time'].iloc[0],
-#     #     "Likes": df_id['Likes'].iloc[0],
-#     #     "Dislikes": df_id['Dislikes'].iloc[0],
-#     #     "Safes": df_id['Safes'].iloc[0],
-#     #     'Type_recipe': df_id['Type_recipe'].iloc[0],
-#     #     'Tags': df_id['Tags'].iloc[0],
-#     #     'Count_ingredients': df_id['Count_ingredients'].iloc[0],
-#     #     'Ingredients': df_id['Ingredients'].iloc[0],
-#     #     'Pontions': df_id['Pontions'].iloc[0],
-#     #     'Calorie_content': df_id['Calorie_content'].iloc[0],
-#     #     'Squirrels': df_id['Squirrels'].iloc[0],
-#     #     'Fats': df_id['Fats'].iloc[0],
-#     #     'Carbohydrates': df_id['Carbohydrates'].iloc[0],
-#     #            }
-#     return HttpResponse(template.render(context, request))
-#     # return HttpResponse(f"<h1>Имя: {name}</h1>")
+def card(request, id):
+    template = loader.get_template('b.html')
+    df = pd.read_csv('dataset/data.csv')
+    df_id = df[df['id']==id].iloc[0]
+    context = df_id.to_dict()
+    if context["Images_recipe"] != '[]':
+        context['Images_recipe'] = ast.literal_eval(context['Images_recipe'])[0][1]
+        # temp_image_recipe = context['Images_recipe']
+        # print(df['id'])
+        local_link = file_data_images_to_local.get(context['Images_recipe'])
+        # print(local_link)
+        if local_link != None:
+            context['Images_recipe'] = 'images/images/'+local_link
+        else:
+            context['Images_recipe'] = 'images/not_image/not_image_recipe.png'
+    else:
+        context['Images_recipe'] = 'images/not_image/not_image_recipe.png'
+    # print('[!!]', ast.literal_eval(context['Images_recipe'])[0][1])
+    # context = {
+    #     'Name_recipe': df_id['Name_recipe'].iloc[0],
+    #     'Description': df_id['Description'].iloc[0],
+    #     "Author": df_id['Author'].iloc[0],
+    #     "Cooking_time": df_id['Cooking_time'].iloc[0],
+    #     "Likes": df_id['Likes'].iloc[0],
+    #     "Dislikes": df_id['Dislikes'].iloc[0],
+    #     "Safes": df_id['Safes'].iloc[0],
+    #     'Type_recipe': df_id['Type_recipe'].iloc[0],
+    #     'Tags': df_id['Tags'].iloc[0],
+    #     'Count_ingredients': df_id['Count_ingredients'].iloc[0],
+    #     'Ingredients': df_id['Ingredients'].iloc[0],
+    #     'Pontions': df_id['Pontions'].iloc[0],
+    #     'Calorie_content': df_id['Calorie_content'].iloc[0],
+    #     'Squirrels': df_id['Squirrels'].iloc[0],
+    #     'Fats': df_id['Fats'].iloc[0],
+    #     'Carbohydrates': df_id['Carbohydrates'].iloc[0],
+    #            }
+    return HttpResponse(template.render(context, request))
+    # return HttpResponse(f"<h1>Имя: {name}</h1>")
 
 # def card(request):
 #     return render(request, 'b.html')
@@ -113,4 +130,270 @@ import json
 #     context = {'message': 'Привет, мир!'}
 #     return HttpResponse(template.render(context, request))
 
+def home(request):
+    return redirect('whoami')
 
+def whoami(request):
+    # Получаем user_id из сессии
+    # user_id = request.session.get('user_id')
+
+    # # Получаем пользователя или None
+    # user = None
+    # if user_id:
+    #     try:
+    #         user = MyUser.objects.get(id=user_id)
+    #     except MyUser.DoesNotExist:
+    #         # Если пользователь не найден, очищаем сессию
+    #         request.session.flush()
+
+    # # Передаем в контекст
+    # context = {
+    #     'user': user,  # Полный объект пользователя или None
+    #     'user_id': user.id if user else None,  # Только ID или None
+    #     'is_authenticated': user is not None,  # Флаг авторизации
+    #     'username': user.username if user else 'Гость',  # Имя или "Гость"
+    #     'email': user.email if user else '',
+    # }
+    
+    user = request.user.is_authenticated
+    context = {}
+    if request.user.is_authenticated:
+        context['user_id']=request.user.id
+        context['b']=True
+        context['username']=request.user.username
+        context['email']=request.user.email
+        context['phone_number']=request.user.phone_number
+    print(context)
+    return render(request, 'home/test.html', context)
+
+
+def logout(request):
+    # Получаем токен из cookies
+    token = request.COOKIES.get('session_token')
+
+    # Проверяем, есть ли user_id в сессии Django
+    user_id = request.session.get('user_id')
+    print(token, user_id)
+    if user_id and token:
+        try:
+            # Находим пользователя
+            user = MyUser.objects.get(id=user_id)
+            print('пользователь найден')
+            # Проверяем валидность сессии (опционально, но рекомендуется)
+            if user.validate_session(token):
+                user.logout()  # Вызываем метод logout модели
+
+            # Если хотите строгую проверку, можно сделать так:
+            # if user.session_token == token:
+            #     user.logout()
+
+        except MyUser.DoesNotExist:
+            pass  # Пользователь не найден, ничего не делаем
+
+    # Очищаем сессию Django
+    request.session.flush()
+
+    # Создаем ответ и удаляем куки
+    response = redirect('login')  # Перенаправляем на страницу входа
+    response.delete_cookie('session_token')
+
+    # Если у вас есть другие куки для сессии, удалите их тоже:
+    # response.delete_cookie('session_id')
+    # response.delete_cookie('remember_me')
+
+    return response
+
+
+def login_page(request):
+    if request.method == 'POST':
+        # Получаем данные из формы
+        email_input = request.POST.get('email_input')
+        password_input = request.POST.get('password_input')
+        remember_me = request.POST.get('remember_me')  # опционально
+
+        # print(f'{email_input=}, {password_input=}')
+        try:
+            user = CustomUser.objects.get(email=email_input)
+        except CustomUser.DoesNotExist:
+            user = None
+        if user:
+            if user.check_password(password_input):
+                login(request, user)
+                print('УСПЕШНЫЙ ВХОД')
+                return redirect('whoami')
+            else:
+                print('НЕВЕРНЫЙ ПАРОЛЬ')
+        else:
+            print('НЕТ ПОЛЬЗОВАТЕЛЯ')
+        # print(user)
+        return redirect('/login')
+
+        # Валидация
+        # errors = []
+
+        # if not email_input:
+        #     errors.append("Введите логин или email")
+        # if not password_input:
+        #     errors.append("Введите пароль")
+
+        # Если есть ошибки валидации
+        # if errors:
+        #     return render(request, 'login/login.html', {
+        #         'errors': errors,
+        #         'username_input': username_input,  # Возвращаем логин
+        #         # Пароль НЕ возвращаем!
+        #         'remember_me': remember_me
+        #     })
+        # try:
+        #     user = CustomUser.objects.get(email=email_input)
+            # print(user.username, user.email, user.password_hash)
+            # import secrets
+            # import hashlib
+            # salt = secrets.token_hex(16)  # 32 символа в hex
+            # hash_obj = hashlib.sha256(f"{salt}{password_input}".encode())
+            # hesh_password =  f"{salt}${hash_obj.hexdigest()}"
+            # print(user.check_password('p'))
+            # print(user.username, user.email, user.password)
+            # if user.check_password(password_input):
+            #     print('ТАКОЙ ПОЛЬЗОВАТЕЛЬ ЕСТЬ!!!')
+                # 1. Создаем сессию в модели
+                # token = user.create_session(remember=remember_me)
+
+                # # 2. Сохраняем в Django session
+                # request.session['user_id'] = user.id
+                # request.session['session_token'] = token
+
+                # # 3. Опционально: другие данные
+                # request.session['username'] = user.username
+
+                # # 4. Создаем response с redirect
+                # response = redirect('/whoami')
+
+                # # 5. Устанавливаем cookie для браузера
+                # response.set_cookie('auth_token', token,
+                #                     httponly=True, secure=True)
+
+            #     return response
+            # else:
+            #     print('Неверный пароль')
+            #     errors.append('Неверный пароль')
+            #     return render(request, 'login/login.html', {
+            #         'errors': errors,
+            #         'email_input': email_input,  # Показываем что вводили
+            #         'remember_me': remember_me
+            #     })
+
+        # except:
+        #     print('[!] Такого пользователя нет')
+        #     errors.append('Такого пользователя нет')
+        #     return render(request, 'login/login.html', {
+        #         'errors': errors,
+        #         'email_input': email_input,  # Показываем что вводили
+        #         'remember_me': remember_me
+        #     })
+        # Проверяем пользователя
+        # Пример с обычной проверкой:
+        # from django.contrib.auth import authenticate, login as auth_login
+
+        # user = authenticate(
+        #     request,
+        #     username=username_input,  # или email, если так настроено
+        #     password=password_input
+        # )
+
+        # if user is not None:
+        #     # Успешный логин
+        #     auth_login(request, user)
+
+        #     # "Запомнить меня"
+        #     if remember_me:
+        #         request.session.set_expiry(60 * 60 * 24 * 30)  # 30 дней
+        #     else:
+        #         request.session.set_expiry(0)  # до закрытия браузера
+
+        #     return redirect('home')  # или куда нужно
+        # else:
+        #     # Неправильные учетные данные
+        #     errors.append("Неверный логин или пароль")
+
+        #     # Возвращаем страницу с ошибкой
+        #     return render(request, 'login/login.html', {
+        #         'errors': errors,
+        #         'username_input': username_input,  # Показываем что вводили
+        #         'remember_me': remember_me
+        #     })
+
+    # GET запрос - показать пустую форму
+    return render(request, 'login/login.html', {
+        'username_input': '',
+        'remember_me': False
+    })
+# def login(request):
+#     return render(request, 'login/login.html')
+
+
+def site_registration(request):
+    return render(request, 'registration/registration.html')
+
+# Только для теста, лучше использовать csrf_token в форме
+
+
+def process_button(request):
+    if request.method == 'POST':
+        user_input = request.POST.get('user_input')  # получаем значение
+        print(f"Получен текст: {user_input}")
+        # request.session['a'] = 'q'
+        # request.session.set_expiry(3600)
+
+        # Перенаправление если все ок
+        return redirect('/')
+        # return render(request, 'home/test.html', context={'t':user_input})
+    return redirect('/')
+
+
+def reg(request):
+    if request.method == 'POST':
+        name_input = request.POST.get('name_input')
+        email_input = request.POST.get('email_input')
+        password_input = request.POST.get('password_input')
+
+        # Проверяем данные
+        errors = []
+
+        # if not name_input:
+        #     errors.append("Имя обязательно")
+        # if not email_input:
+        #     errors.append("Email обязателен")
+        # if len(password_input) < 6:
+        #     errors.append("Пароль должен быть не менее 6 символов")
+
+        # Если есть ошибки
+        # if errors:
+        #     # Возвращаем шаблон с сохраненными данными и ошибками
+        #     return render(request, 'registration/registration.html', {
+        #         'errors': errors,
+        #         'name_input': name_input,  # Возвращаем введенные данные
+        #         'email_input': email_input,
+        #         # password обычно не возвращают из соображений безопасности
+        #     })
+
+        # Если все ок - продолжаем обработку
+        print(f'[!] {name_input=}\n[!] {email_input=}\n[!] {password_input=}')
+        # ... сохранение в БД
+        CustomUser()
+        new_user = CustomUser.objects.create_user(
+            username=name_input,
+            email=email_input,
+            password=password_input
+        )
+        new_user.save()
+        # new_user.set_password(password_input)
+        # new_user.save()
+        print('[!] Новый пользователь создан!')
+        return redirect('/login')
+
+    # GET запрос - пустая форма
+    return render(request, 'registration/registration.html', {
+        'name_input': '',
+        'email_input': '',
+    })

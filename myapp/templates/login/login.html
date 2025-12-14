@@ -1,0 +1,85 @@
+<!-- login.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Вход</title>
+    <style>
+        .error { color: red; font-size: 14px; }
+        .form-group { margin-bottom: 15px; }
+        .alert { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
+        .alert-error { background: #f8d7da; color: #721c24; }
+        .alert-success { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <h2>Вход в систему</h2>
+    
+    <!-- Общие ошибки -->
+    {% if errors.general %}
+        <div class="alert alert-error">
+            {{ errors.general }}
+        </div>
+    {% endif %}
+    
+    <!-- Django messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <!-- Поле логина -->
+        <div class="form-group">
+            <label>Email:</label>
+            <input type="text" 
+                   name="email_input" 
+                   required>
+            {% if errors.email %}
+                <div class="error">{{ errors.email }}</div>
+            {% endif %}
+        </div>
+        
+        <!-- Поле пароля -->
+        <div class="form-group">
+            <label>Пароль:</label>
+            <input type="text" 
+                   name="password_input" 
+                   required>
+            {% if errors.password %}
+                <div class="error">{{ errors.password }}</div>
+            {% endif %}
+        </div>
+        
+        <!-- Запомнить меня -->
+        <div class="form-group">
+            <label>
+                <input type="checkbox" 
+                       name="remember_me"
+                       {% if form_data.remember_me or remember_me %}checked{% endif %}>
+                Запомнить меня
+            </label>
+        </div>
+        
+        <!-- Список ошибок (если используется список) -->
+        {% if errors %}
+            <ul class="error">
+                {% for error in errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        
+        <button type="submit">Войти</button>
+        
+        <!-- Ссылки на восстановление пароля и регистрацию -->
+        <div style="margin-top: 20px;">
+            <a href="{% url 'reg' %}">Регистрация</a>
+        </div>
+    </form>
+</body>
+</html>

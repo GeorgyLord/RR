@@ -31,13 +31,13 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'myapp',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'myapp',
 ]
 
 MIDDLEWARE = [
@@ -131,3 +131,19 @@ import os
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_AGE = 1209600  # 2 недели (по умолчанию)
+
+# Сохранять сессию при каждом запросе
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Сессия истекает при закрытии браузера
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+AUTH_USER_MODEL = 'myapp.CustomUser'  # Указываем кастомную модель
+
+# AUTHENTICATION_BACKENDS = {
+#     'myapp.backends.EmailOrUsernameBackend',  # твой кастомный
+#     'django.contrib.auth.backends.ModelBackend',  # стандартный (на всякий случай)
+# }
