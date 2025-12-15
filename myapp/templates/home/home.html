@@ -57,6 +57,7 @@
             padding: 20px;
             margin: 20px;
         }
+
         img {
             width: 200px;
             height: 120px;
@@ -67,7 +68,135 @@
             word-wrap: break-word;
             overflow-wrap: break-word;
         } */
+        .button_like {
+            width: 120px;
+            height: 35px;
+            font-size: medium;
+        }
+
+        .button_dislike {
+            width: 140px;
+            height: 35px;
+            font-size: medium;
+        }
+
+        .button_like.active {
+            background-color: #4CAF50;
+            /* зеленый для "нравится" */
+            color: white;
+            border-color: #4CAF50;
+        }
+
+        .button_dislike.active {
+            background-color: #f44336;
+            /* красный для "не нравится" */
+            color: white;
+            border-color: #f44336;
+        }
+
+        .button_like:hover:not(.active) {
+            background-color: #e8f5e8;
+        }
+
+        .button_dislike:hover:not(.active) {
+            background-color: #ffebee;
+        }
+
+        .button_like,
+        .button_dislike {
+            padding: 5px 10px;
+            border: 1px solid #ccc;
+            background-color: #f0f0f0;
+            /* светлый */
+            cursor: pointer;
+            transition: all 0.1s;
+        }
     </style>
+
+    <script>
+        async function toggleLike(button, type) {
+            const recipeId = button.dataset.recipeId;
+            const container = button.parentElement;
+            const isLike = type === 'like';
+
+            // Визуальное переключение
+            const likeBtn = container.querySelector('.button_like');
+            const dislikeBtn = container.querySelector('.button_dislike');
+
+            // Определяем новую реакцию
+            let newReaction = type;
+            if (button.classList.contains('active')) {
+                newReaction = null;  // снимаем реакцию
+            }
+
+            try {
+                // Отправляем данные на сервер
+                const response = await fetch('/api/reaction/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        recipe_id: recipeId,
+                        reaction: newReaction
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Обновляем визуальное состояние
+                    if (newReaction === null) {
+                        // Снимаем все активности
+                        likeBtn.classList.remove('active');
+                        dislikeBtn.classList.remove('active');
+                    } else if (newReaction === 'like') {
+                        likeBtn.classList.add('active');
+                        dislikeBtn.classList.remove('active');
+                    } else {
+                        dislikeBtn.classList.add('active');
+                        likeBtn.classList.remove('active');
+                    }
+
+                    // Обновляем счетчики, если сервер их вернул
+                    if (data.like_count !== undefined) {
+                        const likeCountSpan = container.querySelector('.like-count');
+                        if (likeCountSpan) likeCountSpan.textContent = data.like_count;
+                    }
+                    if (data.dislike_count !== undefined) {
+                        const dislikeCountSpan = container.querySelector('.dislike-count');
+                        if (dislikeCountSpan) dislikeCountSpan.textContent = data.dislike_count;
+                    }
+
+                    console.log('Реакция сохранена:', data);
+                } else {
+                    console.error('Ошибка сервера:', data.error);
+                    alert('Ошибка сохранения реакции');
+                }
+
+            } catch (error) {
+                console.error('Ошибка сети:', error);
+                alert('Ошибка соединения с сервером');
+            }
+        }
+
+        // Функция для получения CSRF токена
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
 </head>
 
 <body>
@@ -78,20 +207,32 @@
     </header>
     <main>
         <!-- {{card_recipe.0}} -->
-        <div class="cards">
+        <div class="cards" data-recipe-id="{{i.0}}">
             {% for i in card_recipe %}
             <div class="card">
                 <a href="/recipe/{{i.0}}">{{i.0}}</a>
                 <br>
                 <!-- <div>images/not_image/not_image_recipe.png</div> -->
                 {% if i.1 is not None %}
-                    <!-- {{i.1}} -->
-                    <img src="{% static i.1 %}" alt="">
+                <!-- {{i.1}} -->
+                <img src="{% static i.1 %}" alt="">
                 {% else %}
-                    <div>НЕТ ФОТО</div>
-                    <img src="{% static 'images/not_image/not_image_recipe.png' %}" alt="">
+                <div>НЕТ ФОТО</div>
+                <img src="{% static 'images/not_image/not_image_recipe.png' %}" alt="">
                 {% endif %}
                 <h3>{{i.2}}</h3>
+                <div class="reaction-buttons">
+                    <!-- <button class="button_like" onclick="toggleLike(this, 'like')">👍Нравится</button>
+                    <button class="button_dislike" onclick="toggleLike(this, 'dislike')">👎Не нравится</button> -->
+
+                    <button class="button_like" data-recipe-id="{{ recipe.id }}" onclick="toggleLike(this, 'like')">
+                        👍 <span class="like-count">{{ recipe.like_count }}</span>
+                    </button>
+                    <button class="button_dislike" data-recipe-id="{{ recipe.id }}"
+                        onclick="toggleLike(this, 'dislike')">
+                        👎 <span class="dislike-count">{{ recipe.dislike_count }}</span>
+                    </button>
+                </div>
             </div>
             {% endfor%}
         </div>

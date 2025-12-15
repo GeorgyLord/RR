@@ -4,6 +4,7 @@ from django.contrib import admin
 from .models import Recipe
 from .models import CustomUser
 # from .models import Interactions
+from .models import RecipeReaction
 
 # @admin.register(Interactions)
 # class InteractionsAdmin(admin.ModelAdmin):
@@ -14,6 +15,14 @@ from .models import CustomUser
 #     search_fields = [] # Поиск по текстовым полям
 #     ordering = ('-id',) # Сортировка по существующему полю
 
+@admin.register(RecipeReaction)
+class RecipeReactionAdmin(admin.ModelAdmin):
+    list_display = [field.name for field in RecipeReaction._meta.fields]
+    list_filter = []
+    search_fields = [] # Поиск по текстовым полям
+    ordering = ('-id',) # Сортировка по существующему полю
+    
+    
 @admin.register(CustomUser)
 class UserAdmin(admin.ModelAdmin):
     # class Meta:

@@ -20,18 +20,20 @@ from myapp import views
 
 urlpatterns = [
     # path('', views.home),
-    path('settings/', views.settings),
+    path('settings/', views.settings_page, name='settings'),
     # path('admin/', admin.site.urls),
     
     # path('', views.csv_display_view),
-    path('', views.home_index, name='home_index'),
+    path('', views.home_index, name='home_index'), # recipe_list или home_index
     path('whoami', views.whoami, name='whoami'),
     path("recipe/<int:id>", views.card),
     path('admin/', admin.site.urls),
     path('reg/', views.reg, name='reg'),
     path('login/', views.login_page, name='login'),
-    path('logout/', views.logout, name='logout'),
+    path('logout/', views.logout_page, name='logout'),
     path('api/', views.process_button, name='process_button'),
     # path('api/reg/', views.reg, name='api_reg'),
     # path('logout/', views.logout_view, name='logout'),
+    # path('all_recipes/', views.all_recipes, name='all_recipes'),
+    path('api/reaction/', views.handle_reaction, name='handle_reaction'),
 ]

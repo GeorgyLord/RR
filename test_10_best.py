@@ -4,6 +4,8 @@ import ast  # Для безопасного парсинга строковых 
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from functools import lru_cache
+
 # --- Импорты Surprise (Dataset, Reader, SVD, accuracy) удалены ---
 
 # --- 1. Моделирование данных (вместо чтения из CSV-файлов) ---
@@ -295,9 +297,9 @@ def get_hybrid_recommendations(user_id, recipes_df, interactions_df,
     return results_df[['id', 'Name_recipe', 'hybrid_score', 'cf_score_norm', 'cb_score']]
 
 # --- 6. Основной блок выполнения ---
-
+@lru_cache(maxsize=128)
 def start_fun(n, top=5, _RECIPES_FILE_PATH = "dataset/data.csv", _INTERACTIONS_FILE_PATH = "dataset/interaction.csv"):
-    
+    # print(n)
     # --- УКАЖИТЕ ПУТИ К ВАШИМ ФАЙЛАМ ---
     # Замените "recipes.csv" и "interactions.csv" на реальные пути к вашим файлам
     RECIPES_FILE_PATH = _RECIPES_FILE_PATH

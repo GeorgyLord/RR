@@ -12,8 +12,13 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
 from .forms import RegisterForm, LoginForm
+from .models import RecipeReaction, Recipe
 from .models import CustomUser
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.http import JsonResponse
 # from .models import MyUser
 
 class MyUser():
@@ -27,7 +32,11 @@ with open("images_to_local.json", "r") as f:
 
 
 def home_index(request):
-    cur_per_id = request.session.get('user_id')
+    # cur_per_id = request.session.get('user_id')
+    if request.user.is_authenticated:
+        cur_per_id=request.user.id
+    else:
+        return redirect('/login')
     tdf = start_fun(cur_per_id, 10)
     
     tls = tdf['id'].tolist()
@@ -53,8 +62,12 @@ def home_index(request):
     # return render(request, 'home/home.html')
     # return HttpResponse("<h1>ПРИВЕТ</h1>")
 
-def settings(request):
-    cur_per_id = request.session.get('user_id')
+def settings_page(request):
+    # cur_per_id = request.session.get('user_id')
+    if request.user.is_authenticated:
+        cur_per_id=request.user.id
+    else:
+        return redirect('/login')
     
     template = loader.get_template('settings/settings.html')
     df_data = pd.read_csv('dataset/data.csv')
@@ -65,13 +78,14 @@ def settings(request):
     list_pos = intranction_current_person[intranction_current_person['interaction'] == 1]['item_id'].tolist()
     # df_interaction_current_person = list(df_interaction[df_interaction['user_id']==71]['item_id'])
     # print(df_interaction_current_person)
-    print(intranction_current_person)
-    print(list_neg, list_pos)
+    # print(intranction_current_person)
+    # print(list_neg, list_pos)
     id_list_likes_recipes = {
         'id_user':cur_per_id,
         "list_neg":list_neg,
         "list_pos":list_pos,
         }
+    print(id_list_likes_recipes)
     context = id_list_likes_recipes
     return HttpResponse(template.render(context, request))
     # return render(request, 'settings/settings.html')
@@ -155,7 +169,7 @@ def whoami(request):
     #     'email': user.email if user else '',
     # }
     
-    user = request.user.is_authenticated
+    # user = request.user.is_authenticated
     context = {}
     if request.user.is_authenticated:
         context['user_id']=request.user.id
@@ -167,41 +181,44 @@ def whoami(request):
     return render(request, 'home/test.html', context)
 
 
-def logout(request):
+def logout_page(request):
+    if request.user.is_authenticated:
+        logout(request)
+    
     # Получаем токен из cookies
-    token = request.COOKIES.get('session_token')
+    # token = request.COOKIES.get('session_token')
 
     # Проверяем, есть ли user_id в сессии Django
-    user_id = request.session.get('user_id')
-    print(token, user_id)
-    if user_id and token:
-        try:
-            # Находим пользователя
-            user = MyUser.objects.get(id=user_id)
-            print('пользователь найден')
-            # Проверяем валидность сессии (опционально, но рекомендуется)
-            if user.validate_session(token):
-                user.logout()  # Вызываем метод logout модели
+    # user_id = request.session.get('user_id')
+    # print(token, user_id)
+    # if user_id and token:
+    #     try:
+    #         # Находим пользователя
+    #         user = MyUser.objects.get(id=user_id)
+    #         print('пользователь найден')
+    #         # Проверяем валидность сессии (опционально, но рекомендуется)
+    #         if user.validate_session(token):
+    #             user.logout()  # Вызываем метод logout модели
 
             # Если хотите строгую проверку, можно сделать так:
             # if user.session_token == token:
             #     user.logout()
 
-        except MyUser.DoesNotExist:
-            pass  # Пользователь не найден, ничего не делаем
+        # except MyUser.DoesNotExist:
+        #     pass  # Пользователь не найден, ничего не делаем
 
     # Очищаем сессию Django
-    request.session.flush()
+    # request.session.flush()
 
     # Создаем ответ и удаляем куки
-    response = redirect('login')  # Перенаправляем на страницу входа
-    response.delete_cookie('session_token')
+    # response = redirect('login')  # Перенаправляем на страницу входа
+    # response.delete_cookie('session_token')
 
     # Если у вас есть другие куки для сессии, удалите их тоже:
     # response.delete_cookie('session_id')
     # response.delete_cookie('remember_me')
 
-    return response
+    return redirect('/login')
 
 
 def login_page(request):
@@ -220,7 +237,7 @@ def login_page(request):
             if user.check_password(password_input):
                 login(request, user)
                 print('УСПЕШНЫЙ ВХОД')
-                return redirect('whoami')
+                return redirect('/')
             else:
                 print('НЕВЕРНЫЙ ПАРОЛЬ')
         else:
@@ -397,3 +414,73 @@ def reg(request):
         'name_input': '',
         'email_input': '',
     })
+
+
+@csrf_exempt
+@require_POST
+@login_required
+def handle_reaction(request):
+    """Обработка лайков/дизлайков через AJAX"""
+    try:
+        data = json.loads(request.body)
+        recipe_id = data.get('recipe_id')
+        reaction = data.get('reaction')  # 'like', 'dislike', или null
+        
+        recipe = Recipe.objects.get(id=recipe_id)
+        
+        # Удаляем существующую реакцию, если reaction = null
+        if not reaction:
+            RecipeReaction.objects.filter(
+                user=request.user,
+                recipe=recipe
+            ).delete()
+            return JsonResponse({
+                'status': 'removed',
+                'like_count': recipe.recipereaction_set.filter(reaction='like').count(),
+                'dislike_count': recipe.recipereaction_set.filter(reaction='dislike').count()
+            })
+        
+        # Обновляем или создаем реакцию
+        reaction_obj, created = RecipeReaction.objects.update_or_create(
+            user=request.user,
+            recipe=recipe,
+            defaults={'reaction': reaction}
+        )
+        
+        # Получаем количество реакций
+        like_count = recipe.recipereaction_set.filter(reaction='like').count()
+        dislike_count = recipe.recipereaction_set.filter(reaction='dislike').count()
+        
+        return JsonResponse({
+            'status': 'created' if created else 'updated',
+            'reaction': reaction,
+            'like_count': like_count,
+            'dislike_count': dislike_count
+        })
+        
+    except Recipe.DoesNotExist:
+        return JsonResponse({'error': 'Recipe not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+def recipe_list(request):
+    recipes = Recipe.objects.all()
+    
+    # Добавляем информацию о реакциях текущего пользователя
+    for recipe in recipes:
+        recipe.like_count = RecipeReaction.objects.filter(
+            recipe=recipe, reaction='like'
+        ).count()
+        recipe.dislike_count = RecipeReaction.objects.filter(
+            recipe=recipe, reaction='dislike'
+        ).count()
+        
+        # Проверяем реакцию текущего пользователя
+        if request.user.is_authenticated:
+            user_reaction = RecipeReaction.objects.filter(
+                user=request.user, recipe=recipe
+            ).first()
+            recipe.user_reaction = user_reaction.reaction if user_reaction else None
+    
+    return render(request, 'recipes.html', {'recipes': recipes})

@@ -1,4 +1,8 @@
 from django.db import models
+# import hashlib
+# import secrets
+# from datetime import datetime, timedelta
+from django.contrib.auth.models import AbstractUser
 # from django.contrib.auth.models import User
 
 # Create your models here.
@@ -11,6 +15,7 @@ from django.db import models
 
 
 class Recipe(models.Model):
+    """
     Id_Recipe = models.IntegerField(null=True)
     URL = models.CharField()
     Name_recipe = models.CharField()
@@ -35,8 +40,35 @@ class Recipe(models.Model):
     Images_recipe = models.CharField()
     Url_images_recipe = models.CharField()
     Number_page = models.IntegerField()
+    """
     
-    
+    Id_Recipe = models.IntegerField(null=True, blank=True)
+    URL = models.CharField(max_length=500)
+    Name_recipe = models.CharField(max_length=255)
+    Description = models.TextField()
+    Author = models.CharField(max_length=255)
+    Cooking_time = models.IntegerField(default=0)
+    Likes = models.IntegerField(default=0)
+    Dislikes = models.IntegerField(default=0)
+    Safes = models.IntegerField(default=0)
+    Type_recipe = models.CharField(max_length=100)
+    Tags = models.TextField()  # Для SQLite храним как текст
+    Count_ingredients = models.IntegerField(default=0)
+    Ingredients = models.TextField()  # Храним как текст
+    Pontions = models.IntegerField(default=0)
+    Calorie_content = models.FloatField(default=0.0)
+    Squirrels = models.FloatField(default=0.0)
+    Fats = models.FloatField(default=0.0)
+    Carbohydrates = models.FloatField(default=0.0)
+    Steps_text = models.TextField()
+    Steps_images = models.TextField()
+    Url_steps_images = models.TextField()
+    Images_recipe = models.TextField()
+    Url_images_recipe = models.TextField()
+    Number_page = models.IntegerField(default=0)
+
+
+
 # from django.contrib.auth.models import AbstractUser
 
 # class CustomUser(AbstractUser):
@@ -50,13 +82,6 @@ class Recipe(models.Model):
 #     def __str__(self):
 #         return self.email
     
-
-
-from django.db import models
-import hashlib
-import secrets
-from datetime import datetime, timedelta
-from django.contrib.auth.models import AbstractUser
 
 # class MyUser(models.Model):
 #     class Meta:
@@ -141,3 +166,19 @@ class CustomUser(AbstractUser):
 #     def __str__(self):
 #         # return self.q.username
 #         return self.id_recipe
+
+
+
+class RecipeReaction(models.Model):
+    REACTION_CHOICES = [
+        ('like', 'Нравится'),
+        ('dislike', 'Не нравится'),
+    ]
+    
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    reaction = models.CharField(max_length=12, choices=REACTION_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['user', 'recipe']  # один пользователь - одна реакция на рецепт
