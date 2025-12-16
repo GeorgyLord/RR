@@ -1,0 +1,326 @@
+{% load static %}
+{% load i18n %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Рекомендации Рецептов</title>
+    <meta name="csrf-token" content="{{ csrf_token }}"> 
+
+    <style>
+        /* ======================== ОБЩИЕ СТИЛИ ======================== */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: #f8f8f8;
+            color: #333;
+        }
+
+        header {
+            width: 100%;
+            height: 60px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        main {
+            padding: 30px;
+        }
+
+        /* ======================== СЕТКА КАРТОЧЕК ======================== */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+        }
+
+        .card {
+            background-color: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        /* ======================== ИЗОБРАЖЕНИЕ ======================== */
+        .card-image-wrapper {
+            width: 100%;
+            height: 220px;
+            overflow: hidden;
+        }
+
+        .card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        
+        .image-placeholder {
+            width: 100%;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #eee;
+            color: #888;
+            font-size: 1.2em;
+        }
+
+        .image-placeholder img {
+            height: 100%;
+            width: 100%;
+            object-fit: contain;
+        }
+
+        /* ======================== КОНТЕНТ КАРТОЧКИ ======================== */
+        .card-content {
+            padding: 15px 20px;
+            flex-grow: 1;
+        }
+
+        .card-content h3 {
+            margin: 0 0 8px 0;
+            font-size: 1.4em;
+        }
+
+        .recipe-link {
+            color: #007bff;
+            text-decoration: none;
+            font-size: 0.9em;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .score {
+            font-size: 0.85em;
+            color: #777;
+            background-color: #f0faff;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+
+        /* ======================== КНОПКИ РЕАКЦИИ (АНИМАЦИЯ) ======================== */
+        .reaction-buttons {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+            margin-top: auto; 
+        }
+
+        .reaction-buttons button {
+            /* Добавляем transform и transition для анимации */
+            transition: background-color 0.1s, color 0.1s, border-color 0.1s, transform 0.05s ease-out; 
+            padding: 10px 15px; /* Немного уменьшил padding, чтобы лучше работало */
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-grow: 1;
+            margin: 0 5px;
+            font-size: 1em;
+            background-color: #fafafa;
+        }
+        
+        /* Эффект нажатия: кнопка "сжимается" (ДОЛЖЕН СРАБАТЫВАТЬ ВСЕГДА) */
+        .reaction-buttons button:active {
+            transform: scale(0.95);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) inset; 
+        }
+        
+        /* Стили активного состояния */
+        .button_like { color: #4CAF50; border-color: #4CAF50; }
+        .button_like:hover { background-color: #e6ffe6; }
+        .button_like.active { 
+            background-color: #4CAF50; 
+            color: white;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5); 
+        }
+
+        .button_dislike { color: #f44336; border-color: #f44336; }
+        .button_dislike:hover { background-color: #ffe6e6; }
+        .button_dislike.active { 
+            background-color: #f44336; 
+            color: white; 
+            box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
+        }
+
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header_block">
+            </div>
+    </header>
+
+    <main>
+        <div class="cards">
+            {% for recipe in recipes %}
+            <div class="card" data-recipe-id="{{ recipe.id }}">
+                
+                <div class="card-image-wrapper">
+                    {% if recipe.Image_path %}
+                    <img src="{% static recipe.Image_path %}" alt="{{ recipe.Name_recipe }}">
+                    {% else %}
+                    <div class="image-placeholder">
+                        <img src="{% static 'images/not_image/not_image_recipe.png' %}" alt="Нет фото">
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="card-content">
+                    <h3>{{ recipe.Name_recipe }}</h3>
+                    <a href="/recipe/{{ recipe.id }}" class="recipe-link">Перейти к рецепту</a>
+                    
+                    {% if recipe.recommendation_score is not None %}
+                    <div class="score">
+                        Оценка рекомендации: **{{ recipe.recommendation_score|floatformat:4 }}**
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="reaction-buttons">
+                    <button 
+                        class="button_like {% if recipe.user_reaction == 'like' %}active{% endif %}" 
+                        data-recipe-id="{{ recipe.id }}" 
+                        data-action="like"
+                        onclick="toggleReaction(this)">
+                        👍 <span class="like-count">{{ recipe.like_count }}</span>
+                    </button>
+                    
+                    <button 
+                        class="button_dislike {% if recipe.user_reaction == 'dislike' %}active{% endif %}"
+                        data-recipe-id="{{ recipe.id }}"
+                        data-action="dislike"
+                        onclick="toggleReaction(this)">
+                        👎 <span class="dislike-count">{{ recipe.dislike_count }}</span>
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <p style="padding: 20px;">Рецепты не найдены.</p>
+            {% endfor %}
+            
+        </div>
+    </main>
+
+    <script>
+        // --- 1. Надежная функция для получения CSRF-токена ---
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // --- 2. Функция обработки реакции с отладкой ---
+        function toggleReaction(buttonElement) {
+            
+            // --- ПРОВЕРКА КЛИКА (ДЕБАГ) ---
+            console.log(`[CLICK DEBUG] Button clicked! Recipe ID: ${buttonElement.getAttribute('data-recipe-id')}`);
+            // --- Если вы видите это сообщение, клик зафиксирован. ---
+
+            const recipeId = buttonElement.getAttribute('data-recipe-id');
+            const action = buttonElement.getAttribute('data-action');
+            const url = '{% url "react_to_recipe" %}'; 
+            
+            const card = buttonElement.closest('.card');
+            const likeButton = card.querySelector('.button_like');
+            const dislikeButton = card.querySelector('.button_dislike');
+
+            // Получаем токен: сначала из meta-тега, потом из cookie (основной способ)
+            const csrftoken = document.querySelector('meta[name="csrf-token"]') ? 
+                              document.querySelector('meta[name="csrf-token"]').getAttribute('content') : 
+                              getCookie('csrftoken'); 
+            
+            // --- ПРОВЕРКА ТОКЕНА (ДЕБАГ) ---
+            console.log(`[AJAX DEBUG] Sending request to: ${url}`);
+            console.log(`[AJAX DEBUG] CSRF Token: ${csrftoken ? 'Present' : 'MISSING! (Check if you are logged in)'}`);
+            // --- Если токен MISSING, проверьте вход или настройки Django ---
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken, // ОТПРАВКА ТОКЕНА
+                },
+                body: JSON.stringify({
+                    recipe_id: recipeId,
+                    action: action
+                })
+            })
+            .then(response => {
+                console.log(`[AJAX DEBUG] Received response status: ${response.status}`);
+                if (response.status === 403) {
+                    alert('Ошибка доступа (403 Forbidden). Пожалуйста, войдите в систему.');
+                    return Promise.reject('Authentication or CSRF failure');
+                }
+                if (response.status === 404) {
+                    alert('Ошибка 404. URL "api/react/" не найден. Проверьте urls.py');
+                    return Promise.reject('URL not found');
+                }
+                if (!response.ok) {
+                    // Пытаемся получить ошибку из JSON ответа
+                    return response.json().then(err => Promise.reject(err.error));
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('[AJAX DEBUG] Reaction updated successfully.', data);
+                
+                // Обновление счетчиков
+                card.querySelector('.like-count').textContent = data.like_count;
+                card.querySelector('.dislike-count').textContent = data.dislike_count;
+
+                // Обновление активного состояния (АНИМАЦИЯ)
+                likeButton.classList.remove('active');
+                dislikeButton.classList.remove('active');
+                
+                if (data.reaction === 'like') {
+                    likeButton.classList.add('active');
+                } else if (data.reaction === 'dislike') {
+                    dislikeButton.classList.add('active');
+                }
+            })
+            .catch(error => {
+                console.error('[AJAX DEBUG] Error updating reaction:', error);
+                if (error !== 'Authentication or CSRF failure' && error !== 'URL not found') {
+                    alert('Произошла ошибка при обновлении реакции: ' + error);
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

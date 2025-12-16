@@ -55,7 +55,7 @@ class Recipe(models.Model):
     Tags = models.TextField()  # Для SQLite храним как текст
     Count_ingredients = models.IntegerField(default=0)
     Ingredients = models.TextField()  # Храним как текст
-    Pontions = models.IntegerField(default=0)
+    Portions = models.IntegerField(default=0)
     Calorie_content = models.FloatField(default=0.0)
     Squirrels = models.FloatField(default=0.0)
     Fats = models.FloatField(default=0.0)

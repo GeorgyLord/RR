@@ -24,7 +24,8 @@ urlpatterns = [
     # path('admin/', admin.site.urls),
     
     # path('', views.csv_display_view),
-    path('', views.home_index, name='home_index'), # recipe_list или home_index
+    path('test', views.test),
+    path('', views.recipe_list, name='recipe_list'), # recipe_list или home_index
     path('whoami', views.whoami, name='whoami'),
     path("recipe/<int:id>", views.card),
     path('admin/', admin.site.urls),
@@ -36,4 +37,5 @@ urlpatterns = [
     # path('logout/', views.logout_view, name='logout'),
     # path('all_recipes/', views.all_recipes, name='all_recipes'),
     path('api/reaction/', views.handle_reaction, name='handle_reaction'),
+    path('api/react/', views.react_to_recipe, name='react_to_recipe'),
 ]

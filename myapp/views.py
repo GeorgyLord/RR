@@ -1,4 +1,3 @@
-from django.shortcuts import render
 import csv
 import os
 from django.conf import settings
@@ -19,6 +18,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import JsonResponse
+from django.db.models import Case, When, Value, IntegerField
 # from .models import MyUser
 
 class MyUser():
@@ -27,8 +27,48 @@ class MyUser():
 
 # cur_per_id = 71
 # tdf = start_fun(cur_per_id, 10)
-with open("images_to_local.json", "r") as f:
-    file_data_images_to_local = json.load(f)
+# with open("images_to_local.json", "r") as f:
+#     file_data_images_to_local = json.load(f)
+    
+# Глобальная загрузка JSON-данных для пути к изображениям
+try:
+    # Предполагается, что images_to_local.json находится в корне проекта или в папке, доступной для Django
+    with open("images_to_local.json", "r") as f:
+        file_data_images_to_local = json.load(f)
+    print("images_to_local.json успешно загружен.")
+except FileNotFoundError:
+    print("ВНИМАНИЕ: Файл 'images_to_local.json' не найден. Изображения могут не отображаться.")
+    file_data_images_to_local = {}
+except json.JSONDecodeError:
+    print("ОШИБКА: Не удалось декодировать images_to_local.json. Проверьте формат.")
+    file_data_images_to_local = {}
+
+def extract_url_from_string(data_string):
+    """
+    Безопасно парсит строку вида "[['0', 'ссылка']]" и извлекает ссылку.
+    """
+    if not isinstance(data_string, str):
+        return None
+    
+    try:
+        # Шаг 1: Парсинг строки в список Python
+        parsed_list = ast.literal_eval(data_string)
+        
+        # Шаг 2: Проверка и извлечение ссылки
+        # Ожидаем: [['0', 'ссылка']] -> берем [0], затем [1]
+        if (isinstance(parsed_list, list) and 
+            len(parsed_list) > 0 and 
+            isinstance(parsed_list[0], list) and 
+            len(parsed_list[0]) > 1):
+            
+            return parsed_list[0][1] # Возвращаем второй элемент вложенного списка
+        else:
+            return None
+            
+    except (ValueError, SyntaxError, TypeError):
+        # Ошибка, если строка не является корректным списком
+        return None
+
 
 
 def home_index(request):
@@ -464,11 +504,97 @@ def handle_reaction(request):
         return JsonResponse({'error': str(e)}, status=400)
 
 
+
+@require_POST
+@login_required
+# @csrf_exempt # ВНИМАНИЕ: Для продакшена лучше использовать CSRF-токен в JS, а не @csrf_exempt
+def react_to_recipe(request):
+    """Обрабатывает AJAX-запросы на лайк/дизлайк рецепта."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=403)
+        
+    try:
+        data = json.loads(request.body)
+        recipe_id = data.get('recipe_id')
+        action = data.get('action') # 'like' или 'dislike'
+        
+        print(f"Received data: recipe_id={recipe_id}, action={action}")
+
+        if action not in ['like', 'dislike']:
+            return JsonResponse({'error': 'Invalid action'}, status=400)
+
+        recipe = Recipe.objects.get(id=recipe_id)
+        user = request.user
+        
+        # 1. Проверяем, существует ли предыдущая реакция
+        existing_reaction = RecipeReaction.objects.filter(user=user, recipe=recipe).first()
+        
+        if existing_reaction:
+            if existing_reaction.reaction == action:
+                # Нажали ту же кнопку -> Удаляем реакцию (none)
+                existing_reaction.delete()
+                reaction = 'none'
+            else:
+                # Нажали противоположную кнопку -> Обновляем реакцию
+                existing_reaction.reaction = action
+                existing_reaction.save()
+                reaction = action
+        else:
+            # Новая реакция
+            RecipeReaction.objects.create(user=user, recipe=recipe, reaction=action)
+            reaction = action
+
+        # 2. Получаем новые счетчики
+        like_count = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count()
+        dislike_count = RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count()
+
+        return JsonResponse({
+            'status': 'success',
+            'reaction': reaction,
+            'like_count': like_count,
+            'dislike_count': dislike_count
+        })
+        
+    except Recipe.DoesNotExist:
+        return JsonResponse({'error': 'Recipe not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
 def recipe_list(request):
-    recipes = Recipe.objects.all()
+    if request.user.is_authenticated:
+        cur_per_id=request.user.id
+    else:
+        return redirect('/login')
     
-    # Добавляем информацию о реакциях текущего пользователя
+    tdf = start_fun(cur_per_id, 10) 
+    
+    if tdf.empty:
+        # Если рекомендации не получены, показываем все рецепты (или пустой список/сообщение)
+        recommended_ids = Recipe.objects.values_list('id', flat=True).order_by('?')[:10]
+        print("Рекомендации не получены. Показ случайных рецептов.")
+    else:
+        recommended_ids = tdf['id'].tolist()
+    
+    # 2. Получаем объекты Recipe, сохраняя порядок из рекомендаций (используем Case/When)
+    if not recommended_ids:
+        recipes = Recipe.objects.none() # Пустой QuerySet
+    else:
+        # Создаем список When-условий для сортировки по порядку в recommended_ids
+        ordering = Case(
+            *[When(id=pk, then=Value(i)) for i, pk in enumerate(recommended_ids)],
+            default=Value(len(recommended_ids)),
+            output_field=IntegerField()
+        )
+        
+        # Загружаем рецепты, упорядоченные согласно рекомендациям
+        recipes = Recipe.objects.filter(id__in=recommended_ids).annotate(
+            order=ordering
+        ).order_by('order')
+
+    # 3. Добавляем информацию о реакциях текущего пользователя для отображения на карточках
     for recipe in recipes:
+        # Считаем общее количество лайков/дизлайков (для отображения)
         recipe.like_count = RecipeReaction.objects.filter(
             recipe=recipe, reaction='like'
         ).count()
@@ -482,5 +608,42 @@ def recipe_list(request):
                 user=request.user, recipe=recipe
             ).first()
             recipe.user_reaction = user_reaction.reaction if user_reaction else None
-    
-    return render(request, 'recipes.html', {'recipes': recipes})
+        else:
+            recipe.user_reaction = None
+            
+        # ПРИМЕЧАНИЕ: Если нужно вывести оценку рекомендации, её нужно добавлять сюда
+        if not tdf.empty:
+            score_row = tdf[tdf['id'] == recipe.id]
+            if not score_row.empty:
+                 recipe.recommendation_score = score_row['hybrid_score'].iloc[0]
+            else:
+                 recipe.recommendation_score = None
+        else:
+             recipe.recommendation_score = None
+             
+        # --- ВОССТАНОВЛЕННАЯ ЛОГИКА ПУТИ К ИЗОБРАЖЕНИЮ ---
+        # Предполагаем, что ключ для JSON хранится в поле 'Image' модели Recipe
+        # print(recipe)
+        # print(recipe.Url_images_recipe)
+        # print(extract_url_from_string(recipe.Url_images_recipe))
+        temp_global_link = extract_url_from_string(recipe.Url_images_recipe)
+        try:
+            recipe.Image_path = 'images/images/'+file_data_images_to_local.get(temp_global_link)
+        except:
+            recipe.Image_path = None
+        
+    # Вместо home_index возвращаем recipe_list
+    return render(request, 'home/home3.html', {'recipes': recipes})
+
+
+def test(request):
+    # recipes = Recipe.objects.all()
+    recipes = Recipe.objects.filter(Id_Recipe=0)
+    print(type(recipes), recipes)
+    return render(request, 'test/test.html', {'data': recipes})
+
+    # {% for article in data %}
+    # {{ article.Id_Recipe }}
+    # {{ article.Name_recipe }}
+    # {{ article.URL }}
+    # {% endfor %}
