@@ -73,6 +73,53 @@ def extract_url_from_string(data_string):
         # Ошибка, если строка не является корректным списком
         return None
 
+def extract_data_from_string_2(data_string, single_item=True):
+    """
+    Безопасно парсит строку вида "[['0', 'данные1'], ['1', 'данные2'], ...]" 
+    и извлекает данные.
+    
+    Args:
+        data_string (str): Строка для парсинга
+        single_item (bool): Если True - возвращает первый элемент (для обратной совместимости).
+                           Если False - возвращает список всех данных.
+    
+    Returns:
+        str/None или list/None: В зависимости от параметра single_item
+    """
+    if not isinstance(data_string, str) or not data_string.strip():
+        return None if single_item else []
+
+    try:
+        # Шаг 1: Парсинг строки в список Python
+        parsed_list = ast.literal_eval(data_string)
+        
+        # Проверяем что получили список списков
+        if not isinstance(parsed_list, list):
+            return None if single_item else []
+        
+        # Собираем все элементы
+        result = []
+        for item in parsed_list:
+            if (isinstance(item, list) and 
+                len(item) > 1 and 
+                item[1] is not None):  # Проверяем наличие данных
+                
+                # Можем сохранить с индексом или без
+                if single_item:
+                    # Для обратной совместимости возвращаем первый элемент
+                    return item[1]
+                else:
+                    result.append(item[1])
+        
+        # Если не нашли данных или single_item=True и нет первого элемента
+        if single_item:
+            return None
+        return result
+
+    except (ValueError, SyntaxError, TypeError) as e:
+        # Для отладки можно раскомментировать:
+        # print(f"Ошибка парсинга строки: {e}")
+        return None if single_item else []
 
 def home_index(request):
     # cur_per_id = request.session.get('user_id')
@@ -158,25 +205,46 @@ def settings_page(request):
 #     # return render(request, 'a.html')
 #     return HttpResponse(df.to_html())
 
-
+@login_required
 def card(request, id):
-    template = loader.get_template('b.html')
-    df = pd.read_csv('dataset/data.csv')
-    df_id = df[df['id'] == id].iloc[0]
-    context = df_id.to_dict()
-    if context["Images_recipe"] != '[]':
-        context['Images_recipe'] = ast.literal_eval(
-            context['Images_recipe'])[0][1]
-        # temp_image_recipe = context['Images_recipe']
-        # print(df['id'])
-        local_link = file_data_images_to_local.get(context['Images_recipe'])
-        # print(local_link)
-        if local_link != None:
-            context['Images_recipe'] = 'images/images/'+local_link
-        else:
-            context['Images_recipe'] = 'images/not_image/not_image_recipe.png'
-    else:
-        context['Images_recipe'] = 'images/not_image/not_image_recipe.png'
+    
+    current_recipe = Recipe.objects.filter(
+        Id_Recipe=id
+    )
+    for recipe in current_recipe:
+        
+        temp_global_link = extract_url_from_string(recipe.Url_images_recipe)
+        try:
+            recipe.Images_recipe = 'images/images/' + file_data_images_to_local.get(temp_global_link)
+        except:
+            recipe.Images_recipe = None
+            
+        temp_step = extract_data_from_string_2(recipe.Steps_text, single_item=False)
+        # print('000', recipe.Steps_text)
+        print('111', temp_step)
+        try:
+            recipe.Steps_text = temp_step
+        except:
+            recipe.Steps_text = None
+    return render(request, 'card_recipe/card_recipe.html', {"recipe":current_recipe})
+    
+    # template = loader.get_template('b.html')
+    # df = pd.read_csv('dataset/data.csv')
+    # df_id = df[df['id'] == id].iloc[0]
+    # context = df_id.to_dict()
+    # if context["Images_recipe"] != '[]':
+    #     context['Images_recipe'] = ast.literal_eval(
+    #         context['Images_recipe'])[0][1]
+    #     # temp_image_recipe = context['Images_recipe']
+    #     # print(df['id'])
+    #     local_link = file_data_images_to_local.get(context['Images_recipe'])
+    #     # print(local_link)
+    #     if local_link != None:
+    #         context['Images_recipe'] = 'images/images/'+local_link
+    #     else:
+    #         context['Images_recipe'] = 'images/not_image/not_image_recipe.png'
+    # else:
+    #     context['Images_recipe'] = 'images/not_image/not_image_recipe.png'
     # print('[!!]', ast.literal_eval(context['Images_recipe'])[0][1])
     # context = {
     #     'Name_recipe': df_id['Name_recipe'].iloc[0],
@@ -196,7 +264,7 @@ def card(request, id):
     #     'Fats': df_id['Fats'].iloc[0],
     #     'Carbohydrates': df_id['Carbohydrates'].iloc[0],
     #            }
-    return HttpResponse(template.render(context, request))
+    # return HttpResponse(template.render(context, request))
     # return HttpResponse(f"<h1>Имя: {name}</h1>")
 
 # def card(request):
