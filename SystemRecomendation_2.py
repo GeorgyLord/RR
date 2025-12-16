@@ -235,7 +235,7 @@ def get_recipe_popularity_scores(recipes_df):
 
 
 # --- 6. МОДИФИЦИРОВАННАЯ ГИБРИДНАЯ ФУНКЦИЯ ---
-
+@lru_cache(maxsize=128)
 def get_hybrid_recommendations(user_id, recipes_df, interactions_df, 
                                cb_cosine_sim, item_id_to_index_map, 
                                cf_user_item_matrix, cf_user_sim_df,
@@ -334,7 +334,7 @@ def get_hybrid_recommendations(user_id, recipes_df, interactions_df,
 
 # --- 7. МОДИФИЦИРОВАННЫЙ ОСНОВНОЙ БЛОК (start_fun) ---
 
-@lru_cache(maxsize=128)
+# @lru_cache(maxsize=128)
 def start_fun(n, top=5, _DB_FILE_PATH = "db.sqlite3", _RECIPES_TABLE = "myapp_recipe", _INTERACTIONS_TABLE = "myapp_recipereaction"):
     
     DB_FILE_PATH = _DB_FILE_PATH
@@ -408,7 +408,7 @@ def start_fun(n, top=5, _DB_FILE_PATH = "db.sqlite3", _RECIPES_TABLE = "myapp_re
     ]['item_id'].tolist()
         
     liked_recipes = recipes_df[recipes_df['id'].isin(user_likes)]['Name_recipe'].tolist()
-    print(f"\nПользователю {TEST_USER_ID} понравились: {liked_recipes if liked_recipes else 'пока ничего (холодный старт)'}")
+    # print(f"\nПользователю {TEST_USER_ID} понравились: {liked_recipes if liked_recipes else 'пока ничего (холодный старт)'}")
 
     # Получаем рекомендации с рекомендованным коэффициентом alpha = 0.3
     RECOMMENDED_ALPHA = 0.3
