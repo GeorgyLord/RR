@@ -19,6 +19,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Count
 from django.http import JsonResponse
 from django.db.models import Case, When, Value, IntegerField
+from django.template.loader import render_to_string
 # from .models import MyUser
 
 
@@ -162,19 +163,37 @@ def settings_page(request):
     Отображает страницу настроек с данными пользователя и его реакциями из БД.
     """
     user = request.user
-
+    print(user.id)
     # 1. Получение всех реакций пользователя
     # Используем select_related('recipe'), чтобы избежать N+1 запросов при доступе к Name_recipe
     user_reactions = RecipeReaction.objects.filter(
         user=user).select_related('recipe')
 
+    # for i in list(user_reactions):
+    #     print(i.id, i.reaction, i.recipe_id, i.user_id)
+
     # Фильтрация и получение объектов рецептов
-    liked_recipes = [
-        reaction.recipe for reaction in user_reactions if reaction.reaction == 'like'
-    ]
-    disliked_recipes = [
-        reaction.recipe for reaction in user_reactions if reaction.reaction == 'dislike'
-    ]
+    # liked_recipes = [
+    #     reaction.recipe for reaction in user_reactions if reaction.reaction == 'like'
+    # ]
+    # disliked_recipes = [
+    #     reaction.recipe for reaction in user_reactions if reaction.reaction == 'dislike'
+    # ]
+    id_liked_recipes = []
+    for i in range(len(user_reactions)):
+        if user_reactions[i].reaction == 'like':
+            id_liked_recipes.append(user_reactions[i].recipe_id)
+    liked_recipes = []
+    for i in range(len(id_liked_recipes)):
+        liked_recipes.append(Recipe.objects.filter(Id_Recipe=id_liked_recipes[i])[0])
+        
+    id_disliked_recipes = []
+    for i in range(len(user_reactions)):
+        if user_reactions[i].reaction == 'dislike':
+            id_disliked_recipes.append(user_reactions[i].recipe_id)
+    disliked_recipes = []
+    for i in range(len(id_disliked_recipes)):
+        disliked_recipes.append(Recipe.objects.filter(Id_Recipe=id_disliked_recipes[i])[0])
 
     # 2. Ништяки: Агрегированная статистика
 
@@ -221,7 +240,7 @@ def card(request, id):
             
         temp_step = extract_data_from_string_2(recipe.Steps_text, single_item=False)
         # print('000', recipe.Steps_text)
-        print('111', temp_step)
+        # print('111', temp_step)
         try:
             recipe.Steps_text = temp_step
         except:
@@ -638,10 +657,10 @@ def react_to_recipe(request):
             reaction = action
 
         # 2. Получаем новые счетчики
-        like_count = RecipeReaction.objects.filter(
-            recipe=recipe, reaction='like').count()
-        dislike_count = RecipeReaction.objects.filter(
-            recipe=recipe, reaction='dislike').count()
+        like_count = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count() + \
+            Recipe.objects.filter(Id_Recipe=recipe_id).first().Likes
+        dislike_count = RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count() + \
+            Recipe.objects.filter(Id_Recipe=recipe_id).first().Dislikes
 
         return JsonResponse({
             'status': 'success',
@@ -661,48 +680,48 @@ def recipe_list(request):
         cur_per_id = request.user.id
     else:
         return redirect('/login')
+    
+    # 1. Получаем номер страницы из GET-запроса (по умолчанию 1)
+    page = int(request.GET.get('page', 1))
+    limit = 10  # Сколько рецептов грузим за раз
 
-    tdf = start_fun(cur_per_id, 10)
+    tdf = start_fun(cur_per_id, 50)
 
     if tdf.empty:
-        # Если рекомендации не получены, показываем все рецепты (или пустой список/сообщение)
-        recommended_ids = Recipe.objects.values_list(
-            'id', flat=True).order_by('?')[:10]
-        print("Рекомендации не получены. Показ случайных рецептов.")
+        all_ids = list(Recipe.objects.values_list('id', flat=True).order_by('?')[:50])
     else:
-        recommended_ids = tdf['id'].tolist()
+        all_ids = tdf['id'].tolist()
 
-    # 2. Получаем объекты Recipe, сохраняя порядок из рекомендаций (используем Case/When)
-    if not recommended_ids:
-        recipes = Recipe.objects.none()  # Пустой QuerySet
-    else:
-        # Создаем список When-условий для сортировки по порядку в recommended_ids
-        ordering = Case(
-            *[When(id=pk, then=Value(i))
-              for i, pk in enumerate(recommended_ids)],
-            default=Value(len(recommended_ids)),
-            output_field=IntegerField()
-        )
+    # 2. Вырезаем нужную порцию ID (Slicing)
+    start_idx = (page - 1) * limit
+    end_idx = page * limit
+    page_ids = all_ids[start_idx:end_idx]
+    
+    # Проверка, есть ли еще данные
+    has_next = end_idx < len(all_ids)
 
-        # Загружаем рецепты, упорядоченные согласно рекомендациям
-        recipes = Recipe.objects.filter(id__in=recommended_ids).annotate(
-            order=ordering
-        ).order_by('order')
+    # 3. Получаем объекты из БД в правильном порядке
+    ordering = Case(*[When(id=pk, then=Value(i)) for i, pk in enumerate(page_ids)],
+                    default=Value(len(page_ids)), output_field=IntegerField())
+    recipes = Recipe.objects.filter(id__in=page_ids).annotate(order=ordering).order_by('order')
 
     # 3. Добавляем информацию о реакциях текущего пользователя для отображения на карточках
     for recipe in recipes:
         # 1. Счетчики (должны обновляться корректно)
-        recipe.like_count = RecipeReaction.objects.filter(
-            recipe_id=recipe.Id_Recipe, reaction='like').count()
+        # print('[!]', Recipe.objects.filter(Id_Recipe=recipe.Id_Recipe), Recipe.objects.filter(Id_Recipe=recipe.Id_Recipe).first().Likes)
+        recipe.like_count = RecipeReaction.objects.filter(recipe_id=recipe.Id_Recipe, reaction='like').count() + \
+            Recipe.objects.filter(Id_Recipe=recipe.Id_Recipe).first().Likes
+        
         recipe.dislike_count = RecipeReaction.objects.filter(
-            recipe_id=recipe.Id_Recipe, reaction='dislike').count()
+            recipe_id=recipe.Id_Recipe, reaction='dislike').count() + \
+            Recipe.objects.filter(Id_Recipe=recipe.Id_Recipe).first().Dislikes
 
         # 2. ПРОБЛЕМНЫЙ БЛОК: Проверка реакции текущего пользователя
         if request.user.is_authenticated:
             # ЗАПРОС К БД: Ищем только одну запись
             
-            for i in RecipeReaction.objects.all():
-                print(i.recipe_id, i.user_id, i.reaction)
+            # for i in RecipeReaction.objects.all():
+            #     print(i.recipe_id, i.user_id, i.reaction)
             
             user_reaction = RecipeReaction.objects.filter(
                 # user=request.user,
@@ -715,14 +734,14 @@ def recipe_list(request):
 
             # --- СЕРВЕРНАЯ ОТЛАДКА ---
             # if recipe.user_reaction:
-            print(f"Recipe ID {recipe.Id_Recipe}: Found persistent reaction '{recipe.user_reaction}' for user {request.user.id}")
+            # print(f"Recipe ID {recipe.Id_Recipe}: Found persistent reaction '{recipe.user_reaction}' for user {request.user.id}")
             # -------------------------
         else:
             recipe.user_reaction = None
-        print(request.user, recipe.Name_recipe, recipe.user_reaction)
+        # print(request.user, recipe.Name_recipe, recipe.user_reaction)
         # ПРИМЕЧАНИЕ: Если нужно вывести оценку рекомендации, её нужно добавлять сюда
         if not tdf.empty:
-            score_row = tdf[tdf['id'] == recipe.id]
+            score_row = tdf[tdf['id'] == recipe.Id_Recipe]
             if not score_row.empty:
                 recipe.recommendation_score = score_row['hybrid_score'].iloc[0]
             else:
@@ -742,8 +761,12 @@ def recipe_list(request):
         except:
             recipe.Image_path = None
 
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        html = render_to_string('home/recipe_cards_partial.html', {'recipes': recipes}, request=request)
+        return JsonResponse({'html': html, 'has_next': has_next})
+
     # Вместо home_index возвращаем recipe_list
-    return render(request, 'home/home3.html', {'recipes': recipes})
+    return render(request, 'home/home3.html', {'recipes': recipes, 'has_next': has_next,})
 
 
 def test(request):

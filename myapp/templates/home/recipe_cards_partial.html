@@ -1,0 +1,40 @@
+{% load static %}
+{% for recipe in recipes %}
+<div class="card" data-recipe-id="{{ recipe.Id_Recipe }}">
+
+    <div class="card-image-wrapper">
+        {% if recipe.Image_path %}
+        <img src="{% static recipe.Image_path %}" alt="{{ recipe.Name_recipe }}">
+        {% else %}
+        <div class="image-placeholder">
+            <img src="{% static 'images/not_image/not_image_recipe.png' %}" alt="Нет фото">
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card-content">
+        <h3>{{ recipe.Name_recipe }}</h3>
+        <a href="/recipe/{{ recipe.Id_Recipe }}" class="recipe-link">Перейти к рецепту</a>
+
+        {% if recipe.recommendation_score is not None %}
+        <div class="score">
+            Оценка рекомендации: **{{ recipe.recommendation_score|floatformat:4 }}**
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="reaction-buttons">
+        <button class="button_like {% if recipe.user_reaction == 'like' %}active{% endif %}"
+            data-recipe-id="{{ recipe.Id_Recipe }}" data-action="like" onclick="toggleReaction(this)">
+            👍 <span class="like-count">{{ recipe.like_count }}</span>
+        </button>
+
+        <button class="button_dislike {% if recipe.user_reaction == 'dislike' %}active{% endif %}"
+            data-recipe-id="{{ recipe.Id_Recipe }}" data-action="dislike" onclick="toggleReaction(this)">
+            👎 <span class="dislike-count">{{ recipe.dislike_count }}</span>
+        </button>
+    </div>
+</div>
+{% empty %}
+<p style="padding: 20px;">Рецепты не найдены.</p>
+{% endfor %}
