@@ -38,4 +38,5 @@ urlpatterns = [
     # path('all_recipes/', views.all_recipes, name='all_recipes'),
     path('api/reaction/', views.handle_reaction, name='handle_reaction'),
     path('api/react/', views.react_to_recipe, name='react_to_recipe'),
+    path('search', views.search_recipes, name='search_recipes'),
 ]

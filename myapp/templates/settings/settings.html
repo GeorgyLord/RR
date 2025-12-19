@@ -204,8 +204,10 @@
 <body>
     <header>
         <a class="block" href="/">🏠 Главная</a>
+        <a class="block" style="margin-left: 10px;" href="/search">🔍 Поиск</a>
         <div class="nav-links">
             {% if user.is_authenticated %}
+            <a class="block" href="{% url 'settings' %}">⚙️ Настройки</a>
             <a class="block" href="{% url 'logout' %}">🚪 Выйти</a>
             {% else %}
             <a class="block" href="{% url 'login' %}">🔑 Войти</a>

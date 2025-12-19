@@ -9,6 +9,7 @@ import ast
 import json
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate
+from django.db.models.functions import Lower
 from django.contrib import messages
 from .forms import RegisterForm, LoginForm
 from .models import RecipeReaction, Recipe
@@ -231,7 +232,9 @@ def card(request, id):
         Id_Recipe=id
     )
     for recipe in current_recipe:
-        
+        if recipe.Description.strip() == 'nan':
+            recipe.Description = None
+        # print(recipe.Description)
         temp_global_link = extract_url_from_string(recipe.Url_images_recipe)
         try:
             recipe.Images_recipe = 'images/images/' + file_data_images_to_local.get(temp_global_link)
@@ -245,6 +248,19 @@ def card(request, id):
             recipe.Steps_text = temp_step
         except:
             recipe.Steps_text = None
+        
+        # print(recipe.Tags, type(recipe.Ingredients))
+        raw_list = ast.literal_eval(recipe.Ingredients.strip())
+        # print(raw_list)
+        ingredients = [[item[1], item[2]] for item in raw_list]
+        # print(ingredients)
+        recipe.Ingredients = ingredients
+        
+        temp_tags = ast.literal_eval(recipe.Tags.strip())
+        recipe.Tags = temp_tags
+        # print(temp_tags, type(temp_tags ))
+        
+        
     return render(request, 'card_recipe/card_recipe.html', {"recipe":current_recipe})
     
     # template = loader.get_template('b.html')
@@ -684,11 +700,11 @@ def recipe_list(request):
     # 1. Получаем номер страницы из GET-запроса (по умолчанию 1)
     page = int(request.GET.get('page', 1))
     limit = 10  # Сколько рецептов грузим за раз
-
-    tdf = start_fun(cur_per_id, 50)
+    size = 50
+    tdf = start_fun(cur_per_id, size)
 
     if tdf.empty:
-        all_ids = list(Recipe.objects.values_list('id', flat=True).order_by('?')[:50])
+        all_ids = list(Recipe.objects.values_list('id', flat=True).order_by('?')[:size])
     else:
         all_ids = tdf['id'].tolist()
 
@@ -780,3 +796,68 @@ def test(request):
     # {{ article.Name_recipe }}
     # {{ article.URL }}
     # {% endfor %}
+
+
+
+# views.py
+
+def search_recipes(request):
+    query = request.GET.get('q', '').strip()
+    max_time = request.GET.get('max_time', '')
+    selected_type = request.GET.get('type_recipe', '')
+    
+    recipes = []
+    
+    # Собираем фильтры
+    filters = Q()
+    
+    if query:
+        query_lower = query.lower()
+        # Аннотируем для поиска без учета регистра
+        filters &= (
+            Q(name_lower__contains=query_lower) | 
+            Q(desc_lower__contains=query_lower) |
+            Q(tags_lower__contains=query_lower)
+        )
+
+    if max_time:
+        filters &= Q(Cooking_time__lte=int(max_time))
+        
+    if selected_type:
+        filters &= Q(Type_recipe=selected_type)
+
+    # Выполняем запрос с аннотациями для регистра
+    queryset = Recipe.objects.annotate(
+        name_lower=Lower('Name_recipe'),
+        desc_lower=Lower('Description'),
+        tags_lower=Lower('Tags')
+    ).filter(filters).distinct()
+    
+    recipes = queryset[:40]
+
+    # Обработка лайков и путей к фото (ваша стандартная логика)
+    for recipe in recipes:
+        recipe.like_count = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count()
+        recipe.dislike_count = RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count()
+        if request.user.is_authenticated:
+            react = RecipeReaction.objects.filter(user=request.user, recipe=recipe).first()
+            recipe.user_reaction = react.reaction if react else None
+        
+        temp_link = extract_url_from_string(recipe.Url_images_recipe)
+        recipe.Image_path = 'images/images/' + file_data_images_to_local.get(temp_link, '')
+        
+        temp_tags = ast.literal_eval(recipe.Tags.strip())
+        recipe.Tags = temp_tags
+
+    # Получаем список всех уникальных типов для фильтра
+    all_types = Recipe.objects.values_list('Type_recipe', flat=True).distinct().exclude(Type_recipe__isnull=True)
+
+    return render(request, 'search/search.html', {
+        'recipes': recipes,
+        'query': query,
+        'all_types': all_types,
+        'selected_type': selected_type,
+        'max_time': max_time
+    })
+    
+    

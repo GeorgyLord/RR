@@ -179,7 +179,9 @@
             <div class="row align-items-center">
                 <div class="col-lg-8">
                     <h1 class="display-4 fw-bold mb-3">{{ recipe.0.Name_recipe }}</h1>
+                    {% if recipe.0.Description %}
                     <p class="lead mb-4">{{ recipe.0.Description|truncatechars:200 }}</p>
+                    {% endif %}
 
                     <div class="d-flex flex-wrap mb-3">
                         <span class="stat-badge"><i class="fas fa-clock me-2"></i> {{ recipe.0.Cooking_time }}
@@ -229,11 +231,12 @@
                         <p class="text-muted mb-3"><i class="fas fa-shopping-basket me-2"></i> {{ recipe.0.Count_ingredients }} ингредиентов</p>
 
                         <ul class="ingredient-list">
+                            
                             {% if recipe.0.Ingredients %}
-                            {% for ingredient in recipe.0.Ingredients.splitlines %}
-                            {% if ingredient.strip %}
-                            <li><i class="fas fa-check-circle me-2 text-success"></i> {{ ingredient.strip }}</li>
-                            {% endif %}
+                            {% for ingredient in recipe.0.Ingredients %}
+                                {% if ingredient.0.strip %}
+                                    <li><i class="fas fa-check-circle me-2 text-success"></i> {{ ingredient.0.strip }} - {{ ingredient.1.strip }}</li>
+                                {% endif %}
                             {% endfor %}
                             {% else %}
                             <li class="text-muted">Ингредиенты не указаны</li>
@@ -282,7 +285,7 @@
                         <h5 class="fw-bold mb-3"><i class="fas fa-tags me-2"></i> Теги</h5>
                         <div>
                             {% if recipe.0.Tags %}
-                            {% for tag in recipe.0.Tags.splitlines %}
+                            {% for tag in recipe.0.Tags %}
                             {% if tag.strip %}
                             <span class="tag-badge">{{ tag.strip }}</span>
                             {% endif %}
