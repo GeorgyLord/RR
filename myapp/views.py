@@ -4,7 +4,10 @@ from django.conf import settings
 from django.http import HttpResponse
 import pandas as pd
 from django.template import loader
-from test_10_best import start_fun
+# from test_10_best import start_fun
+# from SystemRecomendation_3 import get_recommendations_for_user
+from SystemRecomendation_5 import get_recommendations_for_user
+# from SystemRecomendation_2 import start_fun
 import ast
 import json
 from django.shortcuts import render, redirect
@@ -123,40 +126,6 @@ def extract_data_from_string_2(data_string, single_item=True):
         # print(f"Ошибка парсинга строки: {e}")
         return None if single_item else []
 
-def home_index(request):
-    # cur_per_id = request.session.get('user_id')
-    if request.user.is_authenticated:
-        cur_per_id = request.user.id
-    else:
-        return redirect('/login')
-    tdf = start_fun(cur_per_id, 10)
-
-    tls = tdf['id'].tolist()
-    context = {}
-    df_data = pd.read_csv('dataset/data.csv')
-    list_link_for_images_recipes = []
-    for i in range(len(tls)):
-        temp_list = [tls[i]]
-        if df_data[df_data['id'] == tls[i]].iloc[0]['Images_recipe'] != '[]':
-            df_id = ast.literal_eval(
-                df_data[df_data['id'] == tls[i]].iloc[0]['Images_recipe'])[0][1]
-            # print(f'images/images/{file_data_images_to_local.get(df_id)}')
-            if file_data_images_to_local.get(df_id) == None:
-                temp_list.append(None)
-            else:
-                temp_list.append(
-                    f'images/images/{file_data_images_to_local.get(df_id)}')
-        df_name_recipe = df_data[df_data['id'] ==
-                                 tls[i]].iloc[0]['Name_recipe']  # Name_recipe
-        temp_list.append(df_name_recipe)
-        list_link_for_images_recipes.append(temp_list)
-
-    context['card_recipe'] = list_link_for_images_recipes
-    template = loader.get_template('home/home.html')
-    return HttpResponse(template.render(context, request))
-    # return render(request, 'home/home.html')
-    # return HttpResponse("<h1>ПРИВЕТ</h1>")
-
 
 @login_required
 def settings_page(request):
@@ -225,7 +194,7 @@ def settings_page(request):
 #     # return render(request, 'a.html')
 #     return HttpResponse(df.to_html())
 
-@login_required
+# @login_required
 def card(request, id):
     
     current_recipe = Recipe.objects.filter(
@@ -240,6 +209,15 @@ def card(request, id):
             recipe.Images_recipe = 'images/images/' + file_data_images_to_local.get(temp_global_link)
         except:
             recipe.Images_recipe = None
+            
+        # print(recipe.Steps_images)
+        # temp_global_link = extract_url_from_string(recipe.Url_images_recipe)
+        # if temp_global_link and temp_global_link in file_data_images_to_local:
+        #     recipe.Image_path = 'images/images/' + file_data_images_to_local.get(temp_global_link)
+        # else:
+        #     recipe.Image_path = 'images/not_image/not_image_recipe.png' # Путь по умолчанию
+            
+            
             
         temp_step = extract_data_from_string_2(recipe.Steps_text, single_item=False)
         # print('000', recipe.Steps_text)
@@ -260,8 +238,33 @@ def card(request, id):
         recipe.Tags = temp_tags
         # print(temp_tags, type(temp_tags ))
         
+        try:
+            # Превращаем строку "[['0', 'url'], ...]" в список списков
+            raw_steps_images = ast.literal_eval(recipe.Url_steps_images)
+        except:
+            raw_steps_images = []
+        steps_images_paths = []
+        for item in raw_steps_images:
+            # Извлекаем URL (второй элемент подсписка)
+            url_from_db = item[1] if isinstance(item, list) and len(item) > 1 else ""
+            
+            # Находим локальный путь через ваш глобальный словарь
+            local_name = file_data_images_to_local.get(url_from_db)
+            
+            if local_name:
+                steps_images_paths.append('images/images/' + local_name)
+            # else:
+            #     steps_images_paths.append('images/not_image/not_image_recipe.png')
+
+        # Сохраняем результат обратно в объект рецепта (или в новую переменную)
+        recipe.processed_steps_images = steps_images_paths
+        
         
     return render(request, 'card_recipe/card_recipe.html', {"recipe":current_recipe})
+    
+    
+    
+    # card_recipe
     
     # template = loader.get_template('b.html')
     # df = pd.read_csv('dataset/data.csv')
@@ -692,97 +695,63 @@ def react_to_recipe(request):
 
 
 def recipe_list(request):
-    if request.user.is_authenticated:
-        cur_per_id = request.user.id
-    else:
+    if not request.user.is_authenticated:
         return redirect('/login')
     
-    # 1. Получаем номер страницы из GET-запроса (по умолчанию 1)
+    cur_per_id = request.user.id
+    
+    # 1. Параметры пагинации
     page = int(request.GET.get('page', 1))
-    limit = 10  # Сколько рецептов грузим за раз
-    size = 50
-    tdf = start_fun(cur_per_id, size)
+    limit = 10  
+    
+    # 2. Получаем рекомендации
+    # ВАЖНО: get_recommendations_for_user возвращает QuerySet из модели Recipe
+    # Увеличим n_top, чтобы хватило на несколько страниц или на текущий лимит
+    recommended_recipes_qs = get_recommendations_for_user(cur_per_id, n_top=50)
 
-    if tdf.empty:
-        all_ids = list(Recipe.objects.values_list('id', flat=True).order_by('?')[:size])
-    else:
-        all_ids = tdf['id'].tolist()
-
-    # 2. Вырезаем нужную порцию ID (Slicing)
+    # 3. Применяем пагинацию к полученному списку рекомендаций
     start_idx = (page - 1) * limit
     end_idx = page * limit
-    page_ids = all_ids[start_idx:end_idx]
     
-    # Проверка, есть ли еще данные
-    has_next = end_idx < len(all_ids)
+    # Так как это QuerySet, мы можем использовать слайсинг
+    recipes = recommended_recipes_qs[start_idx:end_idx]
+    
+    # Проверка на наличие следующей страницы
+    has_next = recommended_recipes_qs.count() > end_idx
 
-    # 3. Получаем объекты из БД в правильном порядке
-    ordering = Case(*[When(id=pk, then=Value(i)) for i, pk in enumerate(page_ids)],
-                    default=Value(len(page_ids)), output_field=IntegerField())
-    recipes = Recipe.objects.filter(id__in=page_ids).annotate(order=ordering).order_by('order')
-
-    # 3. Добавляем информацию о реакциях текущего пользователя для отображения на карточках
+    # 4. Дополнительная обработка каждого рецепта для шаблона
     for recipe in recipes:
-        # 1. Счетчики (должны обновляться корректно)
-        # print('[!]', Recipe.objects.filter(Id_Recipe=recipe.Id_Recipe), Recipe.objects.filter(Id_Recipe=recipe.Id_Recipe).first().Likes)
+        # Счётчики лайков (БД + статика из модели)
         recipe.like_count = RecipeReaction.objects.filter(recipe_id=recipe.Id_Recipe, reaction='like').count() + \
-            Recipe.objects.filter(Id_Recipe=recipe.Id_Recipe).first().Likes
+            (recipe.Likes if recipe.Likes else 0)
         
-        recipe.dislike_count = RecipeReaction.objects.filter(
-            recipe_id=recipe.Id_Recipe, reaction='dislike').count() + \
-            Recipe.objects.filter(Id_Recipe=recipe.Id_Recipe).first().Dislikes
+        recipe.dislike_count = RecipeReaction.objects.filter(recipe_id=recipe.Id_Recipe, reaction='dislike').count() + \
+            (recipe.Dislikes if recipe.Dislikes else 0)
 
-        # 2. ПРОБЛЕМНЫЙ БЛОК: Проверка реакции текущего пользователя
-        if request.user.is_authenticated:
-            # ЗАПРОС К БД: Ищем только одну запись
-            
-            # for i in RecipeReaction.objects.all():
-            #     print(i.recipe_id, i.user_id, i.reaction)
-            
-            user_reaction = RecipeReaction.objects.filter(
-                # user=request.user,
-                user_id=request.user.id,
-                recipe_id=recipe.Id_Recipe
-            ).first()
+        # Проверка реакции текущего пользователя
+        user_reaction = RecipeReaction.objects.filter(
+            user_id=cur_per_id,
+            recipe_id=recipe.Id_Recipe
+        ).first()
+        recipe.user_reaction = user_reaction.reaction if user_reaction else None
 
-            # Устанавливаем атрибут, который будет использоваться в home3.html
-            recipe.user_reaction = user_reaction.reaction if user_reaction else None
-
-            # --- СЕРВЕРНАЯ ОТЛАДКА ---
-            # if recipe.user_reaction:
-            # print(f"Recipe ID {recipe.Id_Recipe}: Found persistent reaction '{recipe.user_reaction}' for user {request.user.id}")
-            # -------------------------
-        else:
-            recipe.user_reaction = None
-        # print(request.user, recipe.Name_recipe, recipe.user_reaction)
-        # ПРИМЕЧАНИЕ: Если нужно вывести оценку рекомендации, её нужно добавлять сюда
-        if not tdf.empty:
-            score_row = tdf[tdf['id'] == recipe.Id_Recipe]
-            if not score_row.empty:
-                recipe.recommendation_score = score_row['hybrid_score'].iloc[0]
-            else:
-                recipe.recommendation_score = None
-        else:
-            recipe.recommendation_score = None
-
-        # --- ВОССТАНОВЛЕННАЯ ЛОГИКА ПУТИ К ИЗОБРАЖЕНИЮ ---
-        # Предполагаем, что ключ для JSON хранится в поле 'Image' модели Recipe
-        # print(recipe)
-        # print(recipe.Url_images_recipe)
-        # print(extract_url_from_string(recipe.Url_images_recipe))
+        # Обработка пути к изображению через ваш JSON-конфиг
         temp_global_link = extract_url_from_string(recipe.Url_images_recipe)
-        try:
-            recipe.Image_path = 'images/images/' + \
-                file_data_images_to_local.get(temp_global_link)
-        except:
-            recipe.Image_path = None
+        if temp_global_link and temp_global_link in file_data_images_to_local:
+            recipe.Image_path = 'images/images/' + file_data_images_to_local.get(temp_global_link)
+        else:
+            recipe.Image_path = 'images/not_image/not_image_recipe.png' # Путь по умолчанию
 
+    # 5. AJAX-обработка (бесконечный скролл)
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         html = render_to_string('home/recipe_cards_partial.html', {'recipes': recipes}, request=request)
         return JsonResponse({'html': html, 'has_next': has_next})
 
-    # Вместо home_index возвращаем recipe_list
-    return render(request, 'home/home3.html', {'recipes': recipes, 'has_next': has_next,})
+    # Основной рендер страницы
+    return render(request, 'home/home3.html', {
+        'recipes': recipes, 
+        'has_next': has_next
+    })
 
 
 def test(request):
@@ -799,57 +768,63 @@ def test(request):
 
 
 
-# views.py
 
 def search_recipes(request):
     query = request.GET.get('q', '').strip()
     max_time = request.GET.get('max_time', '')
     selected_type = request.GET.get('type_recipe', '')
     
-    recipes = []
-    
-    # Собираем фильтры
+    # Собираем фильтры через объект Q для гибкости
     filters = Q()
     
     if query:
-        query_lower = query.lower()
-        # Аннотируем для поиска без учета регистра
+        # icontains делает поиск нечувствительным к регистру и ищет часть слова
+        # Мы объединяем условия через ИЛИ (|), чтобы искать везде сразу
         filters &= (
-            Q(name_lower__contains=query_lower) | 
-            Q(desc_lower__contains=query_lower) |
-            Q(tags_lower__contains=query_lower)
+            Q(Name_recipe__icontains=query) | 
+            Q(Description__icontains=query) |
+            Q(Tags__icontains=query)
         )
 
     if max_time:
-        filters &= Q(Cooking_time__lte=int(max_time))
+        try:
+            filters &= Q(Cooking_time__lte=int(max_time))
+        except ValueError:
+            pass
         
     if selected_type:
         filters &= Q(Type_recipe=selected_type)
 
-    # Выполняем запрос с аннотациями для регистра
-    queryset = Recipe.objects.annotate(
-        name_lower=Lower('Name_recipe'),
-        desc_lower=Lower('Description'),
-        tags_lower=Lower('Tags')
-    ).filter(filters).distinct()
+    # Выполняем запрос с примененными фильтрами
+    # distinct() нужен, чтобы избежать дублей, если слово нашлось и в тегах, и в имени
+    queryset = Recipe.objects.filter(filters).distinct()
     
+    # Ограничиваем выборку для производительности
     recipes = queryset[:40]
 
-    # Обработка лайков и путей к фото (ваша стандартная логика)
+    # Обработка данных для отображения (логика из вашего файла)
     for recipe in recipes:
-        recipe.like_count = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count()
-        recipe.dislike_count = RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count()
+        recipe.like_count = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count() + (recipe.Likes or 0)
+        recipe.dislike_count = RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count() + (recipe.Dislikes or 0)
+        
         if request.user.is_authenticated:
             react = RecipeReaction.objects.filter(user=request.user, recipe=recipe).first()
             recipe.user_reaction = react.reaction if react else None
         
-        temp_link = extract_url_from_string(recipe.Url_images_recipe)
-        recipe.Image_path = 'images/images/' + file_data_images_to_local.get(temp_link, '')
+        # Обработка пути к изображению через ваш JSON-конфиг
+        temp_global_link = extract_url_from_string(recipe.Url_images_recipe)
+        if temp_global_link and temp_global_link in file_data_images_to_local:
+            recipe.Image_path = 'images/images/' + file_data_images_to_local.get(temp_global_link)
+        else:
+            recipe.Image_path = 'images/not_image/not_image_recipe.png' # Путь по умолчанию
         
-        temp_tags = ast.literal_eval(recipe.Tags.strip())
-        recipe.Tags = temp_tags
+        # Безопасный парсинг тегов для шаблона
+        try:
+            recipe.Tags_list = ast.literal_eval(recipe.Tags.strip()) if recipe.Tags else []
+        except:
+            recipe.Tags_list = []
 
-    # Получаем список всех уникальных типов для фильтра
+    # Получаем список всех типов для выпадающего списка в фильтре
     all_types = Recipe.objects.values_list('Type_recipe', flat=True).distinct().exclude(Type_recipe__isnull=True)
 
     return render(request, 'search/search.html', {

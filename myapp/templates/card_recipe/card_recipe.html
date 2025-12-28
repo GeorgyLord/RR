@@ -231,12 +231,12 @@
                         <p class="text-muted mb-3"><i class="fas fa-shopping-basket me-2"></i> {{ recipe.0.Count_ingredients }} ингредиентов</p>
 
                         <ul class="ingredient-list">
-                            
+
                             {% if recipe.0.Ingredients %}
                             {% for ingredient in recipe.0.Ingredients %}
-                                {% if ingredient.0.strip %}
-                                    <li><i class="fas fa-check-circle me-2 text-success"></i> {{ ingredient.0.strip }} - {{ ingredient.1.strip }}</li>
-                                {% endif %}
+                            {% if ingredient.0.strip %}
+                            <li><i class="fas fa-check-circle me-2 text-success"></i> {{ ingredient.0.strip }} - {{ ingredient.1.strip }}</li>
+                            {% endif %}
                             {% endfor %}
                             {% else %}
                             <li class="text-muted">Ингредиенты не указаны</li>
@@ -326,21 +326,16 @@
                             <p class="mb-0">{{ step }}</p>
 
                             <!-- Images for this step -->
-                            {% if recipe.0.Steps_images %}
-                            {% with steps_images_list=recipe.0.Steps_images %}
-                            {% if steps_images_list|length >= forloop.counter %}
-                            {% with step_image=steps_images_list|slice:forloop.counter0|first %}
-                            {% if step_image %}
-                            <div class="mt-3">
-                                <img src="{% static step_image %}"
-                                    alt="Шаг {{ forloop.counter }} - {{ step|truncatechars:50 }}"
-                                    class="img-fluid rounded"
-                                    style="max-height: 300px; object-fit: cover; width: 100%;">
+                            {% if recipe.0.processed_steps_images %}
+                            <div class="step-image-container">
+                                {% with step_index=forloop.counter0 %}
+                                {% for img_path in recipe.0.processed_steps_images %}
+                                {% if forloop.counter0 == step_index %}
+                                <img src="{% static img_path %}" alt="Step image">
+                                {% endif %}
+                                {% endfor %}
+                                {% endwith %}
                             </div>
-                            {% endif %}
-                            {% endwith %}
-                            {% endif %}
-                            {% endwith %}
                             {% endif %}
 
                             <!-- Additional info for last step -->
