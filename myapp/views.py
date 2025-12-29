@@ -2,6 +2,7 @@ import csv
 import os
 from django.conf import settings
 from django.http import HttpResponse
+from collections import defaultdict
 import pandas as pd
 from django.template import loader
 # from test_10_best import start_fun
@@ -836,3 +837,21 @@ def search_recipes(request):
     })
     
     
+def fridge_page(request):
+    # Пример списка продуктов
+    ingredients = [
+        "Авокадо", "Баранина", "Баклажан", "Бекон", "Виноград", "Говядина", "Грибы",
+        "Дрожжи", "Йогурт", "Капуста", "Картофель", "Курица", "Лук", "Макароны",
+        "Молоко", "Мёд", "Огурцы", "Орехи", "Перец", "Помидоры", "Рис", "Рыба",
+        "Сыр", "Сметана", "Творог", "Тыква", "Укроп", "Фасоль", "Фарш", "Хлеб",
+        "Чеснок", "Шоколад", "Яблоки", "Яйца"
+    ]
+    ingredients.sort()
+    
+    grouped = defaultdict(list)
+    for ing in ingredients:
+        grouped[ing[0].upper()].append(ing)
+        
+    return render(request, 'fridge/fridge.html', {
+        'grouped_ingredients': dict(sorted(grouped.items()))
+    })
