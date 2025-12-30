@@ -1,85 +1,291 @@
-<!-- login.html -->
+{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>Вход</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в систему</title>
     <style>
-        .error { color: red; font-size: 14px; }
-        .form-group { margin-bottom: 15px; }
-        .alert { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
-        .alert-error { background: #f8d7da; color: #721c24; }
-        .alert-success { background: #d4edda; color: #155724; }
+        /* ======================== ОБЩИЕ СТИЛИ ======================== */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: #f8f8f8;
+            color: #333;
+        }
+
+        header {
+            width: 100%;
+            height: 60px;
+            background-color: #fff;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-sizing: border-box;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-links {
+            margin-left: auto;
+            display: flex;
+            gap: 15px;
+        }
+
+        .block {
+            padding: 8px 15px;
+            text-decoration: none;
+            color: #007bff;
+            font-weight: 600;
+            border-radius: 4px;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        .block:hover {
+            background-color: #e6f7ff;
+            color: #0056b3;
+        }
+
+        main {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: calc(100vh - 120px);
+            padding: 30px;
+        }
+
+        /* ======================== ФОРМА ВХОДА ======================== */
+        .login-container {
+            width: 100%;
+            max-width: 450px;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-header h2 {
+            color: #007bff;
+            margin: 0 0 10px 0;
+            font-size: 1.8em;
+        }
+
+        .login-header p {
+            color: #666;
+            margin: 0;
+            font-size: 0.95em;
+        }
+
+        /* ======================== СТИЛИ ФОРМЫ ======================== */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: normal;
+        }
+
+        /* ======================== КНОПКА ======================== */
+        .submit-button {
+            width: 100%;
+            padding: 14px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 20px;
+        }
+
+        .submit-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* ======================== ССЫЛКИ ======================== */
+        .login-links {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .login-links a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .login-links a:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+        /* ======================== СООБЩЕНИЯ ОБ ОШИБКАХ ======================== */
+        .alert {
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #f5c6cb;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #c3e6cb;
+        }
+
+        .error {
+            color: #dc3545;
+            font-size: 0.85em;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .general-error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f44336;
+        }
+
+        /* ======================== АДАПТИВНОСТЬ ======================== */
+        @media (max-width: 600px) {
+            .login-container {
+                padding: 25px;
+                margin: 0 10px;
+            }
+
+            main {
+                padding: 15px;
+            }
+        }
     </style>
 </head>
+
 <body>
-    <h2>Вход в систему</h2>
-    
-    <!-- Общие ошибки -->
-    {% if errors.general %}
-        <div class="alert alert-error">
-            {{ errors.general }}
-        </div>
-    {% endif %}
-    
-    <!-- Django messages -->
-    {% if messages %}
-        {% for message in messages %}
+
+    <main>
+        <div class="login-container">
+            <div class="login-header">
+                <h2>🔑 Вход в систему</h2>
+                <p>Введите ваши учетные данные для доступа к аккаунту</p>
+            </div>
+
+            <!-- Общие ошибки (например, неверные email/пароль) -->
+            {% if errors.general %}
+            <div class="general-error">
+                <strong>Ошибка:</strong> {{ errors.general }}
+            </div>
+            {% endif %}
+
+            <!-- Django messages для успешных действий -->
+            {% if messages %}
+            {% for message in messages %}
             <div class="alert alert-{{ message.tags }}">
                 {{ message }}
             </div>
-        {% endfor %}
-    {% endif %}
-    
-    <form method="post">
-        {% csrf_token %}
-        
-        <!-- Поле логина -->
-        <div class="form-group">
-            <label>Email:</label>
-            <input type="text" 
-                   name="email_input" 
-                   required>
-            {% if errors.email %}
-                <div class="error">{{ errors.email }}</div>
+            {% endfor %}
             {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+
+                <!-- Поле Email -->
+                <div class="form-group">
+                    <label>Email:</label>
+                    <input type="email" name="email_input"
+                        class="form-input {% if errors.email %}input-error{% endif %}" placeholder="Введите ваш email"
+                        value="{{ form_data.email_input|default:'' }}" required>
+                    {% if errors.email %}
+                    <span class="error">{{ errors.email }}</span>
+                    {% endif %}
+                </div>
+
+                <!-- Поле пароля -->
+                <div class="form-group">
+                    <label>Пароль:</label>
+                    <input type="password" name="password_input"
+                        class="form-input {% if errors.password %}input-error{% endif %}"
+                        placeholder="Введите ваш пароль" required>
+                    {% if errors.password %}
+                    <span class="error">{{ errors.password }}</span>
+                    {% endif %}
+                </div>
+
+                <!-- Запомнить меня -->
+                <div class="checkbox-group">
+                    <input type="checkbox" id="remember_me" name="remember_me" {% if form_data.remember_me %}checked{% endif %}>
+                    <label for="remember_me">Запомнить меня</label>
+                </div>
+
+                <button type="submit" class="submit-button">Войти</button>
+
+                <div class="login-links">
+                    <p>Ещё нет аккаунта? <a href="{% url 'reg' %}">Зарегистрироваться</a></p>
+                </div>
+            </form>
         </div>
-        
-        <!-- Поле пароля -->
-        <div class="form-group">
-            <label>Пароль:</label>
-            <input type="text" 
-                   name="password_input" 
-                   required>
-            {% if errors.password %}
-                <div class="error">{{ errors.password }}</div>
-            {% endif %}
-        </div>
-        
-        <!-- Запомнить меня -->
-        <div class="form-group">
-            <label>
-                <input type="checkbox" 
-                       name="remember_me"
-                       {% if form_data.remember_me or remember_me %}checked{% endif %}>
-                Запомнить меня
-            </label>
-        </div>
-        
-        <!-- Список ошибок (если используется список) -->
-        {% if errors %}
-            <ul class="error">
-                {% for error in errors %}
-                    <li>{{ error }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-        
-        <button type="submit">Войти</button>
-        
-        <!-- Ссылки на восстановление пароля и регистрацию -->
-        <div style="margin-top: 20px;">
-            <a href="{% url 'reg' %}">Регистрация</a>
-        </div>
-    </form>
+    </main>
 </body>
+
 </html>

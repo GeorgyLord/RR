@@ -39,5 +39,6 @@ urlpatterns = [
     path('api/reaction/', views.handle_reaction, name='handle_reaction'),
     path('api/react/', views.react_to_recipe, name='react_to_recipe'),
     path('search', views.search_recipes, name='search_recipes'),
-    path('fridge/', views.fridge_page)
+    path('fridge/', views.fridge_page),
+    path('about/', views.about_page),
 ]

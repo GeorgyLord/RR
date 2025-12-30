@@ -7,7 +7,8 @@ import pandas as pd
 from django.template import loader
 # from test_10_best import start_fun
 # from SystemRecomendation_3 import get_recommendations_for_user
-from SystemRecomendation_5 import get_recommendations_for_user
+# from SystemRecomendation_5 import get_recommendations_for_user
+from SystemRecomendation_7 import get_recommendations_for_user
 # from SystemRecomendation_2 import start_fun
 import ast
 import json
@@ -394,129 +395,68 @@ def logout_page(request):
 def login_page(request):
     if request.method == 'POST':
         # Получаем данные из формы
-        email_input = request.POST.get('email_input')
-        password_input = request.POST.get('password_input')
-        remember_me = request.POST.get('remember_me')  # опционально
-
-        # print(f'{email_input=}, {password_input=}')
-        try:
-            user = CustomUser.objects.get(email=email_input)
-        except CustomUser.DoesNotExist:
-            user = None
-        if user:
-            if user.check_password(password_input):
-                login(request, user)
-                print('УСПЕШНЫЙ ВХОД')
-                return redirect('/')
-            else:
-                print('НЕВЕРНЫЙ ПАРОЛЬ')
+        email_input = request.POST.get('email_input', '').strip()
+        password_input = request.POST.get('password_input', '')
+        remember_me = request.POST.get('remember_me')
+        
+        errors = {}
+        
+        # Валидация полей
+        if not email_input:
+            errors['email'] = 'Пожалуйста, введите email'
+        elif '@' not in email_input:
+            errors['email'] = 'Введите корректный email адрес'
+        
+        if not password_input:
+            errors['password'] = 'Пожалуйста, введите пароль'
+        
+        # Проверка пользователя только если нет ошибок валидации
+        if not errors:
+            try:
+                user = CustomUser.objects.get(email=email_input)
+                
+                if user.check_password(password_input):
+                    login(request, user)
+                    
+                    # Обработка "Запомнить меня"
+                    if remember_me:
+                        request.session.set_expiry(30 * 24 * 60 * 60)  # 30 дней
+                    else:
+                        request.session.set_expiry(0)  # До закрытия браузера
+                    
+                    messages.success(request, 'Вы успешно вошли в систему!')
+                    return redirect('/')
+                else:
+                    errors['general'] = 'Неверный email или пароль'
+            except CustomUser.DoesNotExist:
+                errors['general'] = 'Неверный email или пароль'
         else:
-            print('НЕТ ПОЛЬЗОВАТЕЛЯ')
-        # print(user)
-        return redirect('/login')
-
-        # Валидация
-        # errors = []
-
-        # if not email_input:
-        #     errors.append("Введите логин или email")
-        # if not password_input:
-        #     errors.append("Введите пароль")
-
-        # Если есть ошибки валидации
-        # if errors:
-        #     return render(request, 'login/login.html', {
-        #         'errors': errors,
-        #         'username_input': username_input,  # Возвращаем логин
-        #         # Пароль НЕ возвращаем!
-        #         'remember_me': remember_me
-        #     })
-        # try:
-        #     user = CustomUser.objects.get(email=email_input)
-        # print(user.username, user.email, user.password_hash)
-        # import secrets
-        # import hashlib
-        # salt = secrets.token_hex(16)  # 32 символа в hex
-        # hash_obj = hashlib.sha256(f"{salt}{password_input}".encode())
-        # hesh_password =  f"{salt}${hash_obj.hexdigest()}"
-        # print(user.check_password('p'))
-        # print(user.username, user.email, user.password)
-        # if user.check_password(password_input):
-        #     print('ТАКОЙ ПОЛЬЗОВАТЕЛЬ ЕСТЬ!!!')
-        # 1. Создаем сессию в модели
-        # token = user.create_session(remember=remember_me)
-
-        # # 2. Сохраняем в Django session
-        # request.session['user_id'] = user.id
-        # request.session['session_token'] = token
-
-        # # 3. Опционально: другие данные
-        # request.session['username'] = user.username
-
-        # # 4. Создаем response с redirect
-        # response = redirect('/whoami')
-
-        # # 5. Устанавливаем cookie для браузера
-        # response.set_cookie('auth_token', token,
-        #                     httponly=True, secure=True)
-
-        #     return response
-        # else:
-        #     print('Неверный пароль')
-        #     errors.append('Неверный пароль')
-        #     return render(request, 'login/login.html', {
-        #         'errors': errors,
-        #         'email_input': email_input,  # Показываем что вводили
-        #         'remember_me': remember_me
-        #     })
-
-        # except:
-        #     print('[!] Такого пользователя нет')
-        #     errors.append('Такого пользователя нет')
-        #     return render(request, 'login/login.html', {
-        #         'errors': errors,
-        #         'email_input': email_input,  # Показываем что вводили
-        #         'remember_me': remember_me
-        #     })
-        # Проверяем пользователя
-        # Пример с обычной проверкой:
-        # from django.contrib.auth import authenticate, login as auth_login
-
-        # user = authenticate(
-        #     request,
-        #     username=username_input,  # или email, если так настроено
-        #     password=password_input
-        # )
-
-        # if user is not None:
-        #     # Успешный логин
-        #     auth_login(request, user)
-
-        #     # "Запомнить меня"
-        #     if remember_me:
-        #         request.session.set_expiry(60 * 60 * 24 * 30)  # 30 дней
-        #     else:
-        #         request.session.set_expiry(0)  # до закрытия браузера
-
-        #     return redirect('home')  # или куда нужно
-        # else:
-        #     # Неправильные учетные данные
-        #     errors.append("Неверный логин или пароль")
-
-        #     # Возвращаем страницу с ошибкой
-        #     return render(request, 'login/login.html', {
-        #         'errors': errors,
-        #         'username_input': username_input,  # Показываем что вводили
-        #         'remember_me': remember_me
-        #     })
+            # Сохраняем введенные данные для повторного заполнения формы
+            request.session['form_data'] = {
+                'email_input': email_input,
+                'remember_me': bool(remember_me)
+            }
+        
+        # Если есть ошибки, показываем форму снова
+        return render(request, 'login/login.html', {
+            'errors': errors,
+            'form_data': {
+                'email_input': email_input,
+                'remember_me': bool(remember_me)
+            }
+        })
 
     # GET запрос - показать пустую форму
+    # Проверяем, есть ли сохраненные данные в сессии
+    form_data = request.session.pop('form_data', None)
+    
     return render(request, 'login/login.html', {
-        'username_input': '',
-        'remember_me': False
+        'errors': {},
+        'form_data': form_data or {
+            'email_input': '',
+            'remember_me': False
+        }
     })
-# def login(request):
-#     return render(request, 'login/login.html')
 
 
 def site_registration(request):
@@ -855,3 +795,7 @@ def fridge_page(request):
     return render(request, 'fridge/fridge.html', {
         'grouped_ingredients': dict(sorted(grouped.items()))
     })
+    
+    
+def about_page(request):
+    return render(request, 'about/about.html', {})

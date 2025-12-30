@@ -89,7 +89,7 @@ def fridge_boost(recipe_ingredients, fridge_items):
     ratio = overlap / max(len(recipe_set), 1)
     return 10.0 + (ratio * 50.0) # Сильный приоритет при совпадении
 
-def get_recommendations(user_id, n_top=5, fridge_ingredients=None, randomness=0.2):
+def get_recommendations_for_user(user_id, n_top=5, fridge_ingredients=None, randomness=0.2):
     """Основная логика системы рекомендаций."""
     df, tfidf = build_tfidf()
     
@@ -201,7 +201,7 @@ if __name__ == "__main__":
 
         print(f'\nХолодильник: {my_fridge}')
         print(f"\nРЕКОМЕНДАЦИИ:")
-        recs = get_recommendations(
+        recs = get_recommendations_for_user(
             TEST_USER_ID, 
             n_top=7, 
             fridge_ingredients=my_fridge,
