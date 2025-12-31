@@ -73,7 +73,8 @@
             background-color: white;
             border-radius: 10px;
             padding: 20px;
-            margin-bottom: 25px;
+            margin-top: 20px;
+            margin-bottom: 20px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
             border-top: 5px solid var(--primary-color);
         }
@@ -156,6 +157,10 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
         }
 
+        .block_cooking_time {
+            margin-bottom: 20px;
+        }
+
         @media (max-width: 768px) {
             .recipe-header {
                 padding: 40px 0 30px;
@@ -164,6 +169,9 @@
             .nutrition-value {
                 font-size: 1.5rem;
             }
+            .block_cooking_time {
+            margin-top: 20px;
+        }
         }
     </style>
 </head>
@@ -300,6 +308,25 @@
 
             <!-- Right Column: Instructions -->
             <div class="col-lg-8">
+                <!-- Cooking time summary -->
+                {% if recipe.0.Cooking_time %}
+                <div class="block_cooking_time p-3 bg-primary bg-opacity-10 rounded d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="fas fa-clock fa-2x text-primary"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-1 text-primary">Время приготовления</h5>
+                        <p class="mb-0">
+                            Общее время приготовления этого рецепта составляет <strong>{{ recipe.0.Cooking_time }}
+                                минут</strong>.
+                            {% if recipe.0.Steps_text and recipe.0.Steps_text|length > 0 %}
+                            Рецепт состоит из {{ recipe.0.Steps_text|length }} шага(ов).
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+
                 <!-- Cooking Steps -->
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-body">
@@ -313,13 +340,7 @@
                                 <div class="step-number">{{ forloop.counter }}</div>
                                 <div>
                                     <h5 class="mb-1">Шаг {{ forloop.counter }}</h5>
-                                    {% if recipe.0.Cooking_time %}
-                                    {% if forloop.first %}
-                                    <small class="text-muted">
-                                        <i class="fas fa-clock me-1"></i> Общее время: {{ recipe.0.Cooking_time }} минут
-                                    </small>
-                                    {% endif %}
-                                    {% endif %}
+                                    
                                 </div>
                             </div>
 
@@ -355,24 +376,6 @@
                             <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
                             <p class="text-muted mb-2">Шаги приготовления не указаны</p>
                             <p class="text-muted small">Автор не предоставил пошаговую инструкцию</p>
-                        </div>
-                        {% endif %}
-
-                        <!-- Cooking time summary -->
-                        {% if recipe.0.Cooking_time %}
-                        <div class="mt-4 p-3 bg-primary bg-opacity-10 rounded d-flex align-items-center">
-                            <div class="me-3">
-                                <i class="fas fa-clock fa-2x text-primary"></i>
-                            </div>
-                            <div>
-                                <h5 class="mb-1 text-primary">Время приготовления</h5>
-                                <p class="mb-0">
-                                    Общее время приготовления этого рецепта составляет <strong>{{ recipe.0.Cooking_time }} минут</strong>.
-                                    {% if recipe.0.Steps_text and recipe.0.Steps_text|length > 0 %}
-                                    Рецепт состоит из {{ recipe.0.Steps_text|length }} шага(ов).
-                                    {% endif %}
-                                </p>
-                            </div>
                         </div>
                         {% endif %}
                     </div>

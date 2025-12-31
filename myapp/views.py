@@ -530,13 +530,14 @@ def reg(request):
 @require_POST
 @login_required
 def handle_reaction(request):
+    # print(111)
     """Обработка лайков/дизлайков через AJAX"""
     try:
         data = json.loads(request.body)
         recipe_id = data.get('recipe_id')
         reaction = data.get('reaction')  # 'like', 'dislike', или null
-
-        recipe = Recipe.objects.get(id=recipe_id)
+        # print(recipe_id)
+        recipe = Recipe.objects.get(Id_Recipe=recipe_id)
 
         # Удаляем существующую реакцию, если reaction = null
         if not reaction:
@@ -579,6 +580,7 @@ def handle_reaction(request):
 @login_required
 # @csrf_exempt # ВНИМАНИЕ: Для продакшена лучше использовать CSRF-токен в JS, а не @csrf_exempt
 def react_to_recipe(request):
+    # print(11)
     """Обрабатывает AJAX-запросы на лайк/дизлайк рецепта."""
     if not request.user.is_authenticated:
         return JsonResponse({'error': 'Authentication required'}, status=403)
@@ -593,7 +595,7 @@ def react_to_recipe(request):
         if action not in ['like', 'dislike']:
             return JsonResponse({'error': 'Invalid action'}, status=400)
 
-        recipe = Recipe.objects.get(id=recipe_id)
+        recipe = Recipe.objects.get(Id_Recipe=recipe_id)
         user = request.user
 
         # 1. Проверяем, существует ли предыдущая реакция
@@ -616,11 +618,14 @@ def react_to_recipe(request):
                 user=user, recipe=recipe, reaction=action)
             reaction = action
 
+        # print(RecipeReaction.objects.filter(recipe=recipe, reaction='like').count(), Recipe.objects.filter(Id_Recipe=recipe_id).first().Likes)
         # 2. Получаем новые счетчики
         like_count = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count() + \
             Recipe.objects.filter(Id_Recipe=recipe_id).first().Likes
         dislike_count = RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count() + \
             Recipe.objects.filter(Id_Recipe=recipe_id).first().Dislikes
+
+        # print(RecipeReaction.objects.filter(recipe=recipe, reaction='like').count(), Recipe.objects.filter(Id_Recipe=recipe_id).first().Likes)
 
         return JsonResponse({
             'status': 'success',
@@ -663,11 +668,14 @@ def recipe_list(request):
     # 4. Дополнительная обработка каждого рецепта для шаблона
     for recipe in recipes:
         # Счётчики лайков (БД + статика из модели)
-        recipe.like_count = RecipeReaction.objects.filter(recipe_id=recipe.Id_Recipe, reaction='like').count() + \
-            (recipe.Likes if recipe.Likes else 0)
+        # RecipeReaction.objects.filter(recipe=recipe, reaction='like').count()
+        recipe.like_count = RecipeReaction.objects.filter(recipe_id=recipe, reaction='like').count() + \
+            Recipe.objects.filter(Id_Recipe=recipe.Id_Recipe).first().Likes
         
-        recipe.dislike_count = RecipeReaction.objects.filter(recipe_id=recipe.Id_Recipe, reaction='dislike').count() + \
-            (recipe.Dislikes if recipe.Dislikes else 0)
+        recipe.dislike_count = RecipeReaction.objects.filter(recipe_id=recipe, reaction='dislike').count() + \
+            Recipe.objects.filter(Id_Recipe=recipe.Id_Recipe).first().Dislikes
+
+        # print(recipe.like_count)
 
         # Проверка реакции текущего пользователя
         user_reaction = RecipeReaction.objects.filter(
@@ -682,6 +690,15 @@ def recipe_list(request):
             recipe.Image_path = 'images/images/' + file_data_images_to_local.get(temp_global_link)
         else:
             recipe.Image_path = 'images/not_image/not_image_recipe.png' # Путь по умолчанию
+            
+        try:
+            # Если это строка вида "['Tag1', 'Tag2']", превращаем в список
+            if isinstance(recipe.Tags, str):
+                recipe.Tags_list = ast.literal_eval(recipe.Tags.strip())
+            else:
+                recipe.Tags_list = recipe.Tags
+        except (ValueError, SyntaxError):
+            recipe.Tags_list = []
 
     # 5. AJAX-обработка (бесконечный скролл)
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -745,13 +762,17 @@ def search_recipes(request):
 
     # Обработка данных для отображения (логика из вашего файла)
     for recipe in recipes:
-        recipe.like_count = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count() + (recipe.Likes or 0)
-        recipe.dislike_count = RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count() + (recipe.Dislikes or 0)
-        
+        # recipe.like_count = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count()
+        # recipe.dislike_count = RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count()
+        recipe.like_count = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count() + recipe.Likes
+        recipe.dislike_count = RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count() + recipe.Dislikes
+    
         if request.user.is_authenticated:
-            react = RecipeReaction.objects.filter(user=request.user, recipe=recipe).first()
-            recipe.user_reaction = react.reaction if react else None
-        
+            user_react = RecipeReaction.objects.filter(recipe=recipe, user=request.user).first()
+            recipe.user_reaction = user_react.reaction if user_react else None
+        else:
+            recipe.user_reaction = None
+            
         # Обработка пути к изображению через ваш JSON-конфиг
         temp_global_link = extract_url_from_string(recipe.Url_images_recipe)
         if temp_global_link and temp_global_link in file_data_images_to_local:
@@ -768,7 +789,7 @@ def search_recipes(request):
     # Получаем список всех типов для выпадающего списка в фильтре
     all_types = Recipe.objects.values_list('Type_recipe', flat=True).distinct().exclude(Type_recipe__isnull=True)
 
-    return render(request, 'search/search.html', {
+    return render(request, 'search/search2.html', {
         'recipes': recipes,
         'query': query,
         'all_types': all_types,

@@ -21,19 +21,17 @@
             Оценка рекомендации: **{{ recipe.recommendation_score|floatformat:4 }}**
         </div>
         {% endif %}
-        {% if recipe.Tags %}
+        {% if recipe.Tags_list %}
         <div class="recipe-meta">
-            <span class="category-badge">
-                {% if recipe.0.Tags %}
-                {% for tag in recipe.0.Tags %}
-                {% if tag.strip %}
-                <span class="tag-badge">{{ tag.strip }}</span>
-                {% endif %}
-                {% endfor %}
-                {% else %}
-                <span class="text-muted">Теги не указаны</span>
-                {% endif %}
-            </span>
+            {% for tag in recipe.Tags_list %}
+            {% if tag.strip %}
+            <span class="tag-badge">{{ tag.strip }}</span>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="recipe-meta">
+            <span class="text-muted" style="font-size: 0.85em;">Теги не указаны</span>
         </div>
         {% endif %}
     </div>

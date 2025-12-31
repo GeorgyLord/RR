@@ -206,6 +206,40 @@
             color: white;
             box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
         }
+
+        .recipe-meta {
+            margin-top: 15px;
+            /* Отступ сверху от названия/ссылки */
+            margin-bottom: 10px;
+            /* Отступ снизу до кнопок лайков */
+            display: flex;
+            flex-wrap: wrap;
+            /* Позволяет тегам переноситься на новую строку */
+            gap: 8px;
+        }
+
+        .tag-badge {
+            display: inline-block;
+            background-color: #f0f2f5;
+            color: #555;
+            padding: 5px 14px;
+            /* Увеличил внутренние отступы для красоты */
+            border-radius: 15px;
+            /* Скругление */
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .tag-badge:hover {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 

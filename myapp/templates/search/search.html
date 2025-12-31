@@ -270,6 +270,30 @@
         .reaction-buttons button {
             transition: background-color 0.1s, color 0.1s, transform 0.05s ease-out;
         }
+        .btn-like, .btn-dislike {
+            border: 1px solid #ddd;
+            background-color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        /* Цвет при активном ЛАЙКЕ */
+        /* СТИЛЬ ДЛЯ ПРОВЕРКИ: ЯРКО-ЗЕЛЕНЫЙ */
+        .btn-like.active {
+            background-color: #30b34e !important;
+            color: white !important;
+            border-color: #1e7e34 !important;
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.5) !important;
+        }
+
+        /* СТИЛЬ ДЛЯ ПРОВЕРКИ: ЯРКО-КРАСНЫЙ */
+        .btn-dislike.active {
+            background-color: #dc3545 !important;
+            color: white !important;
+            border-color: #bd2130 !important;
+            box-shadow: 0 0 10px rgba(220, 53, 69, 0.5) !important;
+        }
     </style>
 </head>
 
@@ -353,58 +377,53 @@
         }
 
         // --- 2. Функция обработки реакции (лайк/дизлайк) ---
-        function toggleReaction(buttonElement) {
-            const recipeId = buttonElement.getAttribute('data-recipe-id');
-            const action = buttonElement.getAttribute('data-action');
-            // Используем URL из Django (убедитесь, что имя 'react_to_recipe' совпадает с urls.py)
-            const url = '/react/';
+        function toggleReaction(button) {
+            const recipeId = button.getAttribute('data-recipe-id');
+            const action = button.getAttribute('data-action');
+            const card = button.closest('.recipe-card');
 
-            const card = buttonElement.closest('.card');
-            const likeButton = card.querySelector('.button_like');
-            const dislikeButton = card.querySelector('.button_dislike');
-
-            // Получаем токен: сначала из meta-тега, если нет - из cookie
-            const csrftoken = document.querySelector('meta[name="csrf-token"]') ?
-                document.querySelector('meta[name="csrf-token"]').getAttribute('content') :
-                getCookie('csrftoken');
+            const likeButton = card.querySelector('.btn-like');
+            const dislikeButton = card.querySelector('.btn-dislike');
+            
+            // Используем правильный путь. Если Django выдает 404, проверьте urls.py
+            const url = '/api/react/'; 
 
             fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken,
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
                 body: JSON.stringify({
                     recipe_id: recipeId,
                     action: action
                 })
             })
-                .then(response => {
-                    if (response.status === 403) {
-                        alert('Ошибка доступа. Пожалуйста, войдите в систему.');
-                        return Promise.reject('Auth failure');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.status === 'success') {
-                        // Обновляем текст счетчиков внутри кнопок
-                        card.querySelector('.like-count').textContent = data.like_count;
-                        card.querySelector('.dislike-count').textContent = data.dislike_count;
+            .then(response => {
+                if (response.status === 403) {
+                    alert('Войдите в систему, чтобы ставить лайки!');
+                    return Promise.reject('Unauthorized');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    // Обновляем числа
+                    likeButton.querySelector('.like-count').textContent = data.like_count;
+                    dislikeButton.querySelector('.dislike-count').textContent = data.dislike_count;
 
-                        // Снимаем класс active с обеих кнопок
-                        likeButton.classList.remove('active');
-                        dislikeButton.classList.remove('active');
+                    // Переключаем классы
+                    likeButton.classList.remove('active');
+                    dislikeButton.classList.remove('active');
 
-                        // Устанавливаем active нужной кнопке, если реакция не 'none'
-                        if (data.reaction === 'like') {
-                            likeButton.classList.add('active');
-                        } else if (data.reaction === 'dislike') {
-                            dislikeButton.classList.add('active');
-                        }
+                    if (data.reaction === 'like') {
+                        likeButton.classList.add('active');
+                    } else if (data.reaction === 'dislike') {
+                        dislikeButton.classList.add('active');
                     }
-                })
-                .catch(error => console.error('Ошибка:', error));
+                }
+            })
+            .catch(error => console.error('Error:', error));
         }
     </script>
 </body>
