@@ -4,6 +4,7 @@
 <html lang="en">
 
 <head>
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ recipe.0.Name_recipe|default:"Recipe Details" }}</title>
@@ -159,6 +160,7 @@
 
         .block_cooking_time {
             margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
         }
 
         @media (max-width: 768px) {
@@ -172,6 +174,44 @@
             .block_cooking_time {
             margin-top: 20px;
         }
+        }
+        .button_like {
+            margin-right: 10px;
+        }
+        .button_like, .button_dislike {
+            min-width: 60px;
+        }
+        /* Стили для кнопок реакций */
+        .reaction-buttons .btn {
+            background-color: #ffffff !important; /* Белый фон */
+            border: 1px solid #dee2e6;           /* Серая рамка */
+            color: #333;                          /* Темный текст/иконка */
+            opacity: 1 !important;                /* Полная непрозрачность */
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Эффект при наведении */
+        .reaction-buttons .btn:hover {
+            background-color: #f8f9fa !important;
+            border-color: #adb5bd;
+        }
+
+        /* Активное состояние Лайка (когда нажато) */
+        .button_like.active {
+            background-color: #e7f1ff !important; /* Светло-голубой фон */
+            border-color: #0d6efd !important;
+            color: #0d6efd !important;            /* Синий текст и иконка */
+        }
+
+        /* Активное состояние Дизлайка (когда нажато) */
+        .button_dislike.active {
+            background-color: #f8d7da !important; /* Светло-красный фон */
+            border-color: #dc3545 !important;
+            color: #dc3545 !important;            /* Красный текст и иконка */
         }
     </style>
 </head>
@@ -200,10 +240,21 @@
                         <span class="stat-badge"><i class="fas fa-utensils me-2"></i> {{ recipe.0.Type_recipe }}</span>
                     </div>
 
-                    <div class="d-flex flex-wrap">
+                    <!-- <div class="d-flex flex-wrap">
                         <span class="stat-badge"><i class="fas fa-thumbs-up me-2"></i> {{ recipe.0.Likes }}</span>
                         <span class="stat-badge"><i class="fas fa-thumbs-down me-2"></i> {{ recipe.0.Dislikes }}</span>
                         <span class="stat-badge"><i class="fas fa-bookmark me-2"></i> {{ recipe.0.Safes }}</span>
+                    </div> -->
+                    <div class="reaction-buttons mt-4 mb-4">
+                        <button class="button_like btn {% if user_reaction == 'like' %}active{% endif %}"
+                                data-recipe-id="{{ recipe.0.Id_Recipe }}" data-action="like" onclick="toggleReaction(this)">
+                            <i class="fas fa-thumbs-up"></i> <span class="like-count">{{ recipe.0.Likes|default:0 }}</span>
+                        </button>
+
+                        <button class="button_dislike btn {% if user_reaction == 'dislike' %}active{% endif %}"
+                                data-recipe-id="{{ recipe.0.Id_Recipe }}" data-action="dislike" onclick="toggleReaction(this)">
+                            <i class="fas fa-thumbs-down"></i> <span class="dislike-count">{{ recipe.0.Dislikes|default:0 }}</span>
+                        </button>
                     </div>
                 </div>
 
@@ -430,6 +481,53 @@
                 }, index * 100);
             });
         });
+        function toggleReaction(button) {
+            const recipeId = button.getAttribute('data-recipe-id');
+            const action = button.getAttribute('data-action');
+
+            const container = button.closest('.reaction-buttons');
+            // Ищем кнопки лайка и дизлайка именно ВНУТРИ этого контейнера
+            const likeButton = container.querySelector('.button_like');
+            const dislikeButton = container.querySelector('.button_dislike');
+
+
+            fetch('/api/react/', { // Укажите правильный путь из urls.py
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    recipe_id: recipeId,
+                    action: action
+                })
+            })
+            .then(response => {
+                if (response.status === 403) {
+                    alert('Войдите в систему, чтобы ставить лайки!');
+                    return Promise.reject('Unauthorized');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    // Обновляем числа
+                    likeButton.querySelector('.like-count').textContent = data.like_count;
+                    dislikeButton.querySelector('.dislike-count').textContent = data.dislike_count;
+
+                    // Переключаем классы
+                    likeButton.classList.remove('active');
+                    dislikeButton.classList.remove('active');
+
+                    if (data.reaction === 'like') {
+                        likeButton.classList.add('active');
+                    } else if (data.reaction === 'dislike') {
+                        dislikeButton.classList.add('active');
+                    }
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
     </script>
 </body>
 

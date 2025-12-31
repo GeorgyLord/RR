@@ -680,10 +680,12 @@ def recipe_list(request):
         # Проверка реакции текущего пользователя
         user_reaction = RecipeReaction.objects.filter(
             user_id=cur_per_id,
-            recipe_id=recipe.Id_Recipe
+            recipe_id=recipe.id
         ).first()
         recipe.user_reaction = user_reaction.reaction if user_reaction else None
 
+        # print(f'{user_reaction=} {cur_per_id=} {recipe.Id_Recipe=}')
+        
         # Обработка пути к изображению через ваш JSON-конфиг
         temp_global_link = extract_url_from_string(recipe.Url_images_recipe)
         if temp_global_link and temp_global_link in file_data_images_to_local:
