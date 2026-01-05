@@ -41,4 +41,6 @@ urlpatterns = [
     path('search', views.search_recipes, name='search_recipes'),
     path('fridge/', views.fridge_page),
     path('about/', views.about_page),
+    path('add_recipe/', views.add_recipe_page),
+
 ]

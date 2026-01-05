@@ -149,6 +149,12 @@ class CustomUser(AbstractUser):
     email = models.CharField(blank=True, null=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     id_liked_recipes = models.JSONField(default=list, blank=True)
+    created_recipes = models.ManyToManyField(
+        'Recipe', 
+        related_name='creators',
+        blank=True,
+        verbose_name='Созданные рецепты'
+    )
 
     def __str__(self):
         return self.username

@@ -3,6 +3,8 @@ import os
 from django.conf import settings
 from django.http import HttpResponse
 from collections import defaultdict
+import hashlib
+import uuid
 import pandas as pd
 from django.template import loader
 # from test_10_best import start_fun
@@ -26,7 +28,9 @@ from django.db.models import Q, Count
 from django.http import JsonResponse
 from django.db.models import Case, When, Value, IntegerField
 from django.template.loader import render_to_string
+from .forms import RecipeForm
 # from .models import MyUser
+from django.db.models import Max
 
 
 class MyUser():
@@ -176,15 +180,26 @@ def settings_page(request):
         dislikes=Count('reaction', filter=Q(reaction='dislike'))
     )
 
+    created_recipes_qs = user.created_recipes.all()
+    created_recipes_list = []
+    
+    for recipe in created_recipes_qs:
+        # Считаем реальные лайки: Значение из поля Likes + Количество в таблице реакций
+        real_likes = recipe.Likes + RecipeReaction.objects.filter(recipe=recipe, reaction='like').count()
+        real_dislikes = recipe.Dislikes + RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count()
+        
+        # Временно записываем эти значения в объект рецепта, чтобы использовать в шаблоне
+        recipe.total_likes = real_likes
+        recipe.total_dislikes = real_dislikes
+        created_recipes_list.append(recipe)
+
     context = {
-        # Объект CustomUser (доступны поля username, email, date_joined и т.д.)
         'user': user,
         'liked_recipes': liked_recipes,
         'disliked_recipes': disliked_recipes,
-        # Передаем агрегированную статистику
         'reaction_stats': reaction_stats,
+        'created_recipes': created_recipes_list, # <--- ДОБАВЛЯЕМ ЭТО
     }
-
     return render(request, 'settings/settings.html', context)
 
 # def index(request):
@@ -822,3 +837,158 @@ def fridge_page(request):
     
 def about_page(request):
     return render(request, 'about/about.html', {})
+
+def add_recipe_page(request):
+    if request.method == 'POST':
+        form = RecipeForm(request.POST, request.FILES)
+        
+        if form.is_valid():
+            try:
+                recipe = form.save(commit=False)
+                
+                # Пути к файлам
+                json_path = os.path.join(settings.BASE_DIR, 'images_to_local.json')
+                save_dir = os.path.join(settings.BASE_DIR, 'static', 'images', 'images')
+                
+                if not os.path.exists(save_dir):
+                    os.makedirs(save_dir)
+
+                # --- 1. ЗАГРУЗКА JSON (Один раз в начале) ---
+                local_images_map = {}
+                if os.path.exists(json_path):
+                    try:
+                        with open(json_path, 'r', encoding='utf-8') as f:
+                            local_images_map = json.load(f)
+                    except json.JSONDecodeError:
+                        local_images_map = {}
+
+                # Вспомогательная функция для сохранения фото
+                def process_image(image_file):
+                    if not image_file: 
+                        return None
+                    
+                    # Генерируем имена
+                    ext = os.path.splitext(image_file.name)[1]
+                    random_name = f"img_{uuid.uuid4()}{ext}" # Виртуальное имя
+                    hashed_name = hashlib.md5(random_name.encode()).hexdigest() + ext # Реальное имя файла
+                    
+                    # Сохраняем файл
+                    file_path = os.path.join(save_dir, hashed_name)
+                    with open(file_path, 'wb+') as destination:
+                        for chunk in image_file.chunks():
+                            destination.write(chunk)
+                    
+                    # Добавляем в карту
+                    local_images_map[random_name] = hashed_name
+                    return random_name
+
+                # --- 2. ID RECIPE ---
+                max_id_dict = Recipe.objects.aggregate(Max('Id_Recipe'))
+                max_id = max_id_dict['Id_Recipe__max']
+                recipe.Id_Recipe = 0 if max_id is None else int(max_id) + 1
+
+                # --- 3. ГЛАВНОЕ ФОТО ---
+                main_image = request.FILES.get('main_image')
+                main_img_name = process_image(main_image)
+                
+                if main_img_name:
+                    recipe.Url_images_recipe = str([['0', main_img_name]])
+                    recipe.Images_recipe = str([['0', main_img_name]])
+                else:
+                    recipe.Url_images_recipe = "[]"
+                    recipe.Images_recipe = "[]" # Оставляем пустым или заполняем по желанию
+
+                # --- 4. ШАГИ ПРИГОТОВЛЕНИЯ (ТЕКСТ + ФОТО) ---
+                steps_json = request.POST.get('steps', '[]')
+                
+                formatted_steps_text = []   # Для Steps_text
+                formatted_steps_urls = []   # Для Url_steps_images
+                
+                try:
+                    steps_data = json.loads(steps_json)
+                    step_write_index = 0 # Индекс, который пойдет в БД (0, 1, 2...)
+                    
+                    for step in steps_data:
+                        text = step.get('text', '').strip()
+                        # Берем stepId из JSON, чтобы найти соответствующий файл в request.FILES
+                        step_id_from_js = step.get('stepId') 
+                        
+                        if text:
+                            # 1. Текст
+                            formatted_steps_text.append([str(step_write_index), text])
+                            
+                            # 2. Картинка
+                            # Ищем файл с именем step_image_{ID_из_JS}
+                            img_key = f"step_image_{step_id_from_js}"
+                            step_file = request.FILES.get(img_key)
+                            
+                            step_img_name = process_image(step_file)
+                            
+                            if step_img_name:
+                                # Добавляем в список: ['0', 'random_name.jpg']
+                                formatted_steps_urls.append([str(step_write_index), step_img_name])
+                            
+                            step_write_index += 1
+                    
+                    recipe.Steps_text = str(formatted_steps_text)
+                    recipe.Url_steps_images = str(formatted_steps_urls)
+                    recipe.Steps_images = str(formatted_steps_urls)
+                    
+                except Exception as e:
+                    print(f"Ошибка шагов: {e}")
+                    recipe.Steps_text = "[]"
+                    recipe.Url_steps_images = "[]"
+
+                # --- 5. СОХРАНЕНИЕ JSON (Один раз в конце) ---
+                with open(json_path, 'w', encoding='utf-8') as f:
+                    json.dump(local_images_map, f, ensure_ascii=False, indent=4)
+
+                # --- 6. ОСТАЛЬНЫЕ ПОЛЯ ---
+                # Tags
+                raw_tags = form.cleaned_data.get('Tags', '')
+                if raw_tags:
+                    tags_list = [tag.strip() for tag in raw_tags.split(',') if tag.strip()]
+                    recipe.Tags = str(tags_list)
+                else:
+                    recipe.Tags = "[]"
+
+                # Ingredients
+                ingredients_text = form.cleaned_data.get('Ingredients', '')
+                ingredients_lines = [line.strip() for line in ingredients_text.split('\n') if line.strip()]
+                formatted_ingredients = []
+                for index, line in enumerate(ingredients_lines):
+                    name = line; quantity = ""
+                    if ' - ' in line: parts = line.split(' - ', 1); name, quantity = parts[0].strip(), parts[1].strip()
+                    elif '-' in line: parts = line.split('-', 1); name, quantity = parts[0].strip(), parts[1].strip()
+                    formatted_ingredients.append([str(index), name, quantity])
+                recipe.Ingredients = str(formatted_ingredients)
+                recipe.Count_ingredients = len(formatted_ingredients)
+
+                # Meta
+                recipe.Author = request.user.username if request.user.is_authenticated else "Guest"
+                recipe.Number_page = 0
+                recipe.Likes = 0; recipe.Dislikes = 0; recipe.Safes = 0
+                recipe.URL = f"/recipe/"
+
+                # Сохранение рецепта
+                recipe.save()
+                recipe.URL = f"/recipe/{recipe.Id_Recipe}/"
+                recipe.save()
+                
+                if request.user.is_authenticated:
+                    request.user.created_recipes.add(recipe)
+                
+                messages.success(request, 'Рецепт успешно добавлен!')
+                return redirect('/')
+                
+            except Exception as e:
+                print(f"Global Error: {e}")
+                messages.error(request, f'Ошибка: {str(e)}')
+        else:
+            messages.error(request, f'Ошибка формы: {form.errors}')
+    else:
+        form = RecipeForm()
+    
+    return render(request, 'add_recipe/add_recipe.html', {'form': form})
+
+
