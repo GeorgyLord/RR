@@ -8,6 +8,8 @@ import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from functools import lru_cache
+from nltk.stem.snowball import SnowballStemmer
+stemmer = SnowballStemmer("russian")
 
 # ------------------- DJANGO INIT -------------------
 
@@ -18,13 +20,22 @@ django.setup()
 
 from myapp.models import Recipe, RecipeReaction
 
+STOP_INGREDIENTS = {
+    "соль", "сахар", "вода", "перец", "масло", "масло растительное", 
+    "масло подсолнечное", "специи", "зелень"
+}
+
+
 def normalize_text(text):
     if not isinstance(text, str):
         return ""
     text = text.lower()
     text = re.sub(r"[^а-яa-z\s]", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
-    return text
+    # return text
+    
+    words = text.split()
+    return " ".join([stemmer.stem(w) for w in words])
 
 def safe_parse(val):
     try:
@@ -79,15 +90,30 @@ def fridge_boost(recipe_ingredients, fridge_items):
     if not fridge_items:
         return 1.0
 
+    # Нормализация и фильтрация стоп-слов
     recipe_set = set(normalize_text(str(i)) for i in recipe_ingredients if i)
     fridge_set = set(normalize_text(str(i)) for i in fridge_items if i)
-
-    overlap = len(recipe_set & fridge_set)
-    if overlap == 0:
-        return 0.05  # Штраф за отсутствие совпадений
     
-    ratio = overlap / max(len(recipe_set), 1)
-    return 10.0 + (ratio * 50.0) # Сильный приоритет при совпадении
+    # Убираем "мусор" из расчета пересечений (но не из общего списка)
+    meaningful_fridge = fridge_set - STOP_INGREDIENTS
+    meaningful_recipe = recipe_set - STOP_INGREDIENTS
+    
+    # Если в холодильнике только соль/вода, буст не работает
+    if not meaningful_fridge:
+        return 1.0
+
+    overlap = len(meaningful_recipe & meaningful_fridge)
+
+    # Если нет совпадений по значимым продуктам -> небольшой штраф (но не убийственный)
+    if overlap == 0:
+        return 0.5 
+    
+    # Считаем покрытие именно по значимым продуктам
+    ratio = overlap / max(len(meaningful_recipe), 1)
+    
+    # Более мягкая формула: 
+    # Максимальный буст = 3.0 (если 100% продуктов есть), минимальный = 1.0
+    return 1.0 + (ratio * 2.0)
 
 def get_recommendations_for_user(user_id, n_top=5, fridge_ingredients=None, randomness=0.2):
     """Основная логика системы рекомендаций."""
