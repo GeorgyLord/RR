@@ -146,7 +146,7 @@ def get_recommendations_for_user(user_id, n_top=5, fridge_ingredients=None, rand
         boosts = df["parsed_ingredients"].apply(
             lambda x: fridge_boost(x, fridge_ingredients)
         )
-        final_boosts = np.where(boosts.values > 1.0, boosts.values * 10, 0.001)
+        final_boosts = np.where(boosts.values > 1.0, boosts.values * 2, 0.001)  # boosts.values * 10 - если нужно штрафовать жёстче
         scores = scores * final_boosts
 
     # 4. Штраф за дизлайки

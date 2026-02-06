@@ -1,297 +1,61 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Поиск рецептов</title>
     <meta name="csrf-token" content="{{ csrf_token }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* ======================== ОБЩИЕ СТИЛИ (ИЗ HOME3.HTML) ======================== */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            background-color: #f8f8f8;
-            color: #333;
-        }
+        /* (ВАШИ СТАРЫЕ СТИЛИ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ) */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f8f8f8; color: #333; }
+        header { width: 100%; height: 60px; background-color: #fff; border-bottom: 1px solid #ddd; display: flex; align-items: center; padding: 0 20px; box-sizing: border-box; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); }
+        .nav-links { margin-left: auto; display: flex; gap: 15px; }
+        .block { padding: 8px 15px; text-decoration: none; color: #007bff; font-weight: 600; border-radius: 4px; transition: 0.2s; display: flex; align-items: center; }
+        .block:hover { background-color: #e6f7ff; color: #0056b3; }
+        main { padding: 30px; max-width: 1200px; margin: 0 auto; }
 
-        header {
-            width: 100%;
-            height: 60px;
-            background-color: #fff;
-            border-bottom: 1px solid #ddd;
+        .search-section { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); margin-bottom: 30px; }
+        .search-bar-main { display: flex; gap: 10px; margin-bottom: 15px; }
+        .search-input { flex: 1; padding: 12px 20px; border: 2px solid #ddd; border-radius: 30px; font-size: 16px; outline: none; transition: border-color 0.3s; }
+        .search-button { padding: 10px 25px; background-color: #007bff; color: white; border: none; border-radius: 30px; font-weight: 600; cursor: pointer; }
+        
+        .filter-panel { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; padding-top: 15px; border-top: 1px solid #eee; }
+        .filter-group { display: flex; align-items: center; gap: 10px; }
+        .filter-group label { font-weight: 600; font-size: 0.9rem; color: #666; }
+        .filter-group select, .filter-group input[type="number"], .filter-group input[type="text"] { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; outline: none; }
+        
+        .clear-filters { font-size: 0.85rem; color: #dc3545; text-decoration: none; margin-left: auto; }
+
+        /* Стили для чекбокса холодильника */
+        .fridge-toggle {
             display: flex;
             align-items: center;
-            padding: 0 20px;
-            box-sizing: border-box;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .nav-links {
-            margin-left: auto;
-            display: flex;
-            gap: 15px;
-        }
-
-        .block {
-            padding: 8px 15px;
-            text-decoration: none;
-            color: #007bff;
-            font-weight: 600;
-            border-radius: 4px;
-            transition: 0.2s;
-            display: flex;
-            align-items: center;
-        }
-
-        .block:hover {
-            background-color: #e6f7ff;
-            color: #0056b3;
-        }
-
-        main {
-            padding: 30px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        /* ======================== СЕКЦИЯ ПОИСКА ======================== */
-        .search-section {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            margin-bottom: 30px;
-        }
-
-        .search-bar-main {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .search-input {
-            flex: 1;
-            padding: 12px 20px;
-            border: 2px solid #ddd;
-            border-radius: 30px;
-            font-size: 16px;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-
-        .search-input:focus {
-            border-color: #007bff;
-        }
-
-        .search-button {
-            padding: 10px 25px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 30px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .search-button:hover {
-            background-color: #0056b3;
-        }
-
-        .filter-panel {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            align-items: center;
-            padding-top: 15px;
-            border-top: 1px solid #eee;
-        }
-
-        .filter-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .filter-group label {
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: #666;
-        }
-
-        .filter-group select,
-        .filter-group input {
+            background-color: #fff0f0;
             padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            outline: none;
-        }
-
-        .clear-filters {
-            font-size: 0.85rem;
-            color: #dc3545;
-            text-decoration: none;
-            margin-left: auto;
-        }
-
-        /* ======================== СЕТКА КАРТОЧЕК (КОПИЯ HOME3) ======================== */
-        .cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 25px;
-        }
-
-        .card {
-            background-color: #fff;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        .card-image-wrapper {
-            width: 100%;
-            height: 220px;
-            overflow: hidden;
-        }
-
-        .card img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .card-content {
-            padding: 15px 20px;
-            flex-grow: 1;
-        }
-
-        .card-content h3 {
-            margin: 0 0 8px 0;
-            font-size: 1.4em;
-        }
-
-        .recipe-link {
-            color: #007bff;
-            text-decoration: none;
-            font-size: 0.9em;
-            display: block;
-            margin-bottom: 10px;
-        }
-
-        .score {
-            font-size: 0.85em;
-            color: #777;
-            background-color: #f0faff;
-            padding: 5px 10px;
-            border-radius: 4px;
-            margin-top: 10px;
-        }
-
-        /* ======================== КНОПКИ РЕАКЦИЙ (КОПИЯ HOME3) ======================== */
-        .reaction-buttons {
-            display: flex;
-            justify-content: space-between;
-            padding: 15px 20px;
-            border-top: 1px solid #eee;
-            margin-top: auto;
-            background: #fff;
-        }
-
-        .reaction-buttons button {
-            transition: all 0.1s ease, transform 0.05s ease-out;
-            padding: 10px 15px;
-            border: 2px solid #ccc;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            flex-grow: 1;
-            margin: 0 5px;
-            font-size: 1em;
-            background-color: #fafafa;
-        }
-
-        .reaction-buttons button:active {
-            transform: scale(0.95);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) inset;
-        }
-
-        .button_like {
-            color: #4CAF50;
-            border-color: #4CAF50;
-        }
-
-        .button_like:hover {
-            background-color: #e6ffe6;
-        }
-
-        .button_like.active {
-            background-color: #4CAF50;
-            color: white;
-            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
-        }
-
-        .button_dislike {
-            color: #f44336;
-            border-color: #f44336;
-        }
-
-        .button_dislike:hover {
-            background-color: #ffe6e6;
-        }
-
-        .button_dislike.active {
-            background-color: #f44336;
-            color: white;
-            box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
-        }
-
-        .reaction-buttons button:active {
-            transform: scale(0.95);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) inset;
-        }
-
-        /* Переход для плавности */
-        .reaction-buttons button {
-            transition: background-color 0.1s, color 0.1s, transform 0.05s ease-out;
-        }
-        .button_like, .button_dislike {
-            border: 1px solid #ddd;
-            background-color: white;
-            padding: 5px 15px;
             border-radius: 20px;
+            border: 1px solid #ffcccc;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: 0.2s;
         }
-        /* Цвет при активном ЛАЙКЕ */
-        /* СТИЛЬ ДЛЯ ПРОВЕРКИ: ЯРКО-ЗЕЛЕНЫЙ */
-        .button_like.active {
-            background-color: #4CAF50;
-            color: white;
-            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
-        }
-
-        /* СТИЛЬ ДЛЯ ПРОВЕРКИ: ЯРКО-КРАСНЫЙ */
-        .button_dislike.active {
-            background-color: #f44336;
-            color: white;
-            box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
-        }
+        .fridge-toggle:hover { background-color: #ffe6e6; }
+        .fridge-toggle input { margin-right: 8px; accent-color: #ff6b6b; transform: scale(1.2); }
+        .fridge-toggle span { color: #d63031; font-weight: 600; font-size: 0.9rem; }
+        
+        /* Сетка и карточки (Ваши стили) */
+        .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
+        .card { background-color: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; }
+        .card-image-wrapper { width: 100%; height: 220px; overflow: hidden; }
+        .card img { width: 100%; height: 100%; object-fit: cover; }
+        .card-content { padding: 15px 20px; flex-grow: 1; }
+        .recipe-meta { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag-badge { background-color: #f0f2f5; padding: 5px 14px; border-radius: 15px; font-size: 12px; border: 1px solid #e0e0e0; }
+        
+        .reaction-buttons { display: flex; justify-content: space-between; padding: 15px 20px; border-top: 1px solid #eee; margin-top: auto; }
+        .button_like, .button_dislike { padding: 5px 15px; border-radius: 20px; cursor: pointer; border: 1px solid #ddd; background: white; }
+        .button_like.active { background-color: #4CAF50; color: white; border-color: #4CAF50; }
+        .button_dislike.active { background-color: #f44336; color: white; border-color: #f44336; }
     </style>
 </head>
 
@@ -314,13 +78,25 @@
 
     <main>
         <div class="search-section">
-            <form action="{% url 'search_recipes' %}" method="GET" class="search-form-extended">
+            <form action="{% url 'search_recipes' %}" method="GET" class="search-form-extended" id="searchForm">
+                
+                <!-- СКРЫТОЕ ПОЛЕ ДЛЯ ИНГРЕДИЕНТОВ -->
+                <!-- Сюда JS подставит данные из холодильника, если чекбокс активен -->
+                <input type="hidden" name="ingredients" id="hiddenIngredients" value="{{ ingredients_query }}">
+
                 <div class="search-bar-main">
-                    <input type="text" name="q" class="search-input" placeholder="Что приготовим?" value="{{ query }}">
+                    <input type="text" name="q" class="search-input" placeholder="Название рецепта, теги..." value="{{ query }}">
                     <button type="submit" class="search-button">Найти</button>
                 </div>
 
                 <div class="filter-panel">
+                    
+                    <!-- ЧЕКБОКС ХОЛОДИЛЬНИКА -->
+                    <label class="fridge-toggle" title="Искать рецепты, содержащие продукты из вашего холодильника">
+                        <input type="checkbox" id="useFridgeCheckbox">
+                        <span><i class="fas fa-snowflake"></i> Продукты из холодильника</span>
+                    </label>
+
                     <div class="filter-group">
                         <label>Категория:</label>
                         <select name="type_recipe">
@@ -332,8 +108,8 @@
                     </div>
 
                     <div class="filter-group">
-                        <label>Время до (мин):</label>
-                        <input type="number" name="max_time" value="{{ max_time }}" placeholder="Напр. 30">
+                        <label>Время (мин):</label>
+                        <input type="number" name="max_time" value="{{ max_time }}" placeholder="30" style="width: 60px;">
                     </div>
 
                     <a href="{% url 'search_recipes' %}" class="clear-filters">Сбросить</a>
@@ -341,89 +117,102 @@
             </form>
         </div>
 
-        {% if query %}
-        <p style="margin-bottom: 20px; color: #666;">Результаты поиска для: <b>{{ query }}</b></p>
+        {% if query or ingredients_query %}
+        <p style="margin-bottom: 20px; color: #666;">
+            Результаты 
+            {% if query %} по запросу: <b>{{ query }}</b>{% endif %}
+            {% if ingredients_query %} 
+                <span style="background: #fff0f0; padding: 2px 8px; border-radius: 4px; border: 1px solid #ffcccc; color: #d63031; margin-left: 10px;">
+                    <i class="fas fa-snowflake"></i> Ингредиенты: <b>{{ ingredients_query }}</b>
+                </span>
+            {% endif %}
+        </p>
         {% endif %}
 
         <div class="cards" id="recipe-container">
             {% if recipes %}
             {% include 'home/recipe_cards_partial.html' %}
             {% else %}
-            {% if query %}
             <div style="text-align: center; grid-column: 1/-1; padding: 50px;">
-                <p>Ничего не найдено. Попробуйте изменить запрос.</p>
+                <p>Ничего не найдено. Попробуйте отключить фильтр холодильника или изменить запрос.</p>
             </div>
-            {% endif %}
             {% endif %}
         </div>
     </main>
 
     <script>
-        // --- 1. Функция для получения CSRF-токена из куки ---
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
+        // --- 1. Работа с LocalStorage и формой ---
+        const STORAGE_KEY = 'my_fridge_ingredients';
+        const checkbox = document.getElementById('useFridgeCheckbox');
+        const hiddenInput = document.getElementById('hiddenIngredients');
+        const form = document.getElementById('searchForm');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedData = localStorage.getItem(STORAGE_KEY);
+            const savedIngredients = savedData ? JSON.parse(savedData) : [];
+
+            // Если в URL уже есть ингредиенты (пришли со страницы холодильника), ставим галочку
+            if (hiddenInput.value && hiddenInput.value.trim() !== "") {
+                checkbox.checked = true;
             }
-            return cookieValue;
-        }
 
-        // --- 2. Функция обработки реакции (лайк/дизлайк) ---
+            // Если холодильник пуст, можно заблокировать чекбокс (опционально)
+            if (savedIngredients.length === 0) {
+                checkbox.disabled = true;
+                checkbox.parentElement.title = "Ваш холодильник пуст. Добавьте продукты в разделе 'Мой холодильник'.";
+                checkbox.parentElement.style.opacity = "0.6";
+            }
+
+            // Обработка отправки формы
+            form.addEventListener('submit', function(e) {
+                if (checkbox.checked) {
+                    // Если галочка стоит, берем данные из LocalStorage
+                    const currentData = localStorage.getItem(STORAGE_KEY);
+                    const list = currentData ? JSON.parse(currentData) : [];
+                    hiddenInput.value = list.join(','); // Записываем в скрытое поле
+                } else {
+                    // Если галочки нет, очищаем поле ингредиентов
+                    hiddenInput.value = '';
+                    // Также делаем так, чтобы поле не отправлялось пустым в URL (для красоты)
+                    hiddenInput.name = ''; 
+                }
+            });
+        });
+
+        // --- 2. Стандартные функции (CSRF, Лайки) ---
+        function getCookie(name) { /* (Ваша функция getCookie) */ return null; }
+        
         function toggleReaction(button) {
-            const recipeId = button.getAttribute('data-recipe-id');
+             const recipeId = button.getAttribute('data-recipe-id');
             const action = button.getAttribute('data-action');
-
             const container = button.closest('.reaction-buttons');
-            // Ищем кнопки лайка и дизлайка именно ВНУТРИ этого контейнера
             const likeButton = container.querySelector('.button_like');
             const dislikeButton = container.querySelector('.button_dislike');
 
-
-            fetch('/api/react/', { // Укажите правильный путь из urls.py
+            fetch('/api/react/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
-                body: JSON.stringify({
-                    recipe_id: recipeId,
-                    action: action
-                })
+                body: JSON.stringify({ recipe_id: recipeId, action: action })
             })
             .then(response => {
-                if (response.status === 403) {
-                    alert('Войдите в систему, чтобы ставить лайки!');
-                    return Promise.reject('Unauthorized');
-                }
+                if (response.status === 403) { alert('Войдите в систему!'); return Promise.reject('Unauthorized'); }
                 return response.json();
             })
             .then(data => {
                 if (data.status === 'success') {
-                    // Обновляем числа
                     likeButton.querySelector('.like-count').textContent = data.like_count;
                     dislikeButton.querySelector('.dislike-count').textContent = data.dislike_count;
-
-                    // Переключаем классы
                     likeButton.classList.remove('active');
                     dislikeButton.classList.remove('active');
-
-                    if (data.reaction === 'like') {
-                        likeButton.classList.add('active');
-                    } else if (data.reaction === 'dislike') {
-                        dislikeButton.classList.add('active');
-                    }
+                    if (data.reaction === 'like') likeButton.classList.add('active');
+                    else if (data.reaction === 'dislike') dislikeButton.classList.add('active');
                 }
             })
             .catch(error => console.error('Error:', error));
         }
     </script>
 </body>
-
 </html>

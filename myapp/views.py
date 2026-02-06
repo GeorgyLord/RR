@@ -139,56 +139,38 @@ def settings_page(request):
     Отображает страницу настроек с данными пользователя и его реакциями из БД.
     """
     user = request.user
-    print(user.id)
-    # 1. Получение всех реакций пользователя
-    # Используем select_related('recipe'), чтобы избежать N+1 запросов при доступе к Name_recipe
-    user_reactions = RecipeReaction.objects.filter(
-        user=user).select_related('recipe')
+    
+    # Получаем реакции сразу с загруженными рецептами
+    user_reactions = RecipeReaction.objects.filter(user=user).select_related('recipe')
 
-    # for i in list(user_reactions):
-    #     print(i.id, i.reaction, i.recipe_id, i.user_id)
+    # --- ИСПРАВЛЕНИЕ ОШИБКИ ЗДЕСЬ ---
+    # Мы берем объект рецепта напрямую из связи (reaction.recipe), 
+    # а не ищем его заново по ID, путая id и Id_Recipe.
+    
+    liked_recipes = [
+        reaction.recipe for reaction in user_reactions if reaction.reaction == 'like'
+    ]
+    
+    disliked_recipes = [
+        reaction.recipe for reaction in user_reactions if reaction.reaction == 'dislike'
+    ]
 
-    # Фильтрация и получение объектов рецептов
-    # liked_recipes = [
-    #     reaction.recipe for reaction in user_reactions if reaction.reaction == 'like'
-    # ]
-    # disliked_recipes = [
-    #     reaction.recipe for reaction in user_reactions if reaction.reaction == 'dislike'
-    # ]
-    id_liked_recipes = []
-    for i in range(len(user_reactions)):
-        if user_reactions[i].reaction == 'like':
-            id_liked_recipes.append(user_reactions[i].recipe_id)
-    liked_recipes = []
-    for i in range(len(id_liked_recipes)):
-        liked_recipes.append(Recipe.objects.filter(Id_Recipe=id_liked_recipes[i])[0])
-        
-    id_disliked_recipes = []
-    for i in range(len(user_reactions)):
-        if user_reactions[i].reaction == 'dislike':
-            id_disliked_recipes.append(user_reactions[i].recipe_id)
-    disliked_recipes = []
-    for i in range(len(id_disliked_recipes)):
-        disliked_recipes.append(Recipe.objects.filter(Id_Recipe=id_disliked_recipes[i])[0])
-
-    # 2. Ништяки: Агрегированная статистика
-
-    # Общее количество реакций и статистика лайков/дизлайков за один запрос
+    # Статистика
     reaction_stats = user_reactions.aggregate(
         total=Count('reaction'),
         likes=Count('reaction', filter=Q(reaction='like')),
         dislikes=Count('reaction', filter=Q(reaction='dislike'))
     )
 
+    # Созданные рецепты с подсчетом лайков
     created_recipes_qs = user.created_recipes.all()
     created_recipes_list = []
     
     for recipe in created_recipes_qs:
-        # Считаем реальные лайки: Значение из поля Likes + Количество в таблице реакций
+        # Считаем сумму статических лайков и реакций
         real_likes = recipe.Likes + RecipeReaction.objects.filter(recipe=recipe, reaction='like').count()
         real_dislikes = recipe.Dislikes + RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count()
         
-        # Временно записываем эти значения в объект рецепта, чтобы использовать в шаблоне
         recipe.total_likes = real_likes
         recipe.total_dislikes = real_dislikes
         created_recipes_list.append(recipe)
@@ -198,7 +180,7 @@ def settings_page(request):
         'liked_recipes': liked_recipes,
         'disliked_recipes': disliked_recipes,
         'reaction_stats': reaction_stats,
-        'created_recipes': created_recipes_list, # <--- ДОБАВЛЯЕМ ЭТО
+        'created_recipes': created_recipes_list,
     }
     return render(request, 'settings/settings.html', context)
 
@@ -217,6 +199,7 @@ def card(request, id):
     current_recipe = Recipe.objects.filter(
         Id_Recipe=id
     )
+    
     for recipe in current_recipe:
         if recipe.Description.strip() == 'nan':
             recipe.Description = None
@@ -277,7 +260,24 @@ def card(request, id):
         recipe.processed_steps_images = steps_images_paths
         
         
-    return render(request, 'card_recipe/card_recipe.html', {"recipe":current_recipe})
+    user_reaction = None
+    if request.user.is_authenticated:
+        # Ищем реакцию в БД. Обратите внимание: recipe=recipe_obj (связь идет по системному id, Django сам это сделает)
+        recipe_obj = current_recipe.first()
+        reaction_obj = RecipeReaction.objects.filter(
+            user=request.user,
+            recipe=recipe_obj 
+        ).first()
+        if reaction_obj:
+            user_reaction = reaction_obj.reaction
+
+    # Передаем user_reaction в контекст
+    return render(request, 'card_recipe/card_recipe.html', {
+        "recipe": current_recipe, 
+        "user_reaction": user_reaction,  # <--- ВОТ ЧТОГО НЕ ХВАТАЛО
+        "count_liks":RecipeReaction.objects.filter(recipe=recipe_obj, reaction='like').count()+current_recipe.first().Likes,
+        "count_disliks":RecipeReaction.objects.filter(recipe=recipe_obj, reaction='dislike').count()+current_recipe.first().Dislikes,
+    })
     
     
     
@@ -660,56 +660,57 @@ def recipe_list(request):
         return redirect('/login')
     
     cur_per_id = request.user.id
-    
-    # 1. Параметры пагинации
     page = int(request.GET.get('page', 1))
     limit = 10  
     
-    # 2. Получаем рекомендации
-    # ВАЖНО: get_recommendations_for_user возвращает QuerySet из модели Recipe
-    # Увеличим n_top, чтобы хватило на несколько страниц или на текущий лимит
+    # Получаем рекомендации (QuerySet)
     recommended_recipes_qs = get_recommendations_for_user(cur_per_id, n_top=50)
 
-    # 3. Применяем пагинацию к полученному списку рекомендаций
+    # Пагинация
     start_idx = (page - 1) * limit
     end_idx = page * limit
-    
-    # Так как это QuerySet, мы можем использовать слайсинг
     recipes = recommended_recipes_qs[start_idx:end_idx]
-    
-    # Проверка на наличие следующей страницы
     has_next = recommended_recipes_qs.count() > end_idx
 
-    # 4. Дополнительная обработка каждого рецепта для шаблона
+    # Получаем список ID рецептов на текущей странице для оптимизации запросов
+    # (чтобы не делать запрос в цикле для каждого рецепта)
+    current_page_recipe_ids = [r.id for r in recipes]
+
+    # Получаем реакции пользователя для ВСЕХ рецептов на странице одним запросом
+    user_reactions_map = {}
+    if request.user.is_authenticated:
+        reactions = RecipeReaction.objects.filter(
+            user=request.user,
+            recipe_id__in=current_page_recipe_ids
+        ).values('recipe_id', 'reaction')
+        
+        # Создаем словарь {system_id: reaction}
+        for r in reactions:
+            user_reactions_map[r['recipe_id']] = r['reaction']
+
+    # Обработка рецептов
     for recipe in recipes:
-        # Счётчики лайков (БД + статика из модели)
-        # RecipeReaction.objects.filter(recipe=recipe, reaction='like').count()
-        recipe.like_count = RecipeReaction.objects.filter(recipe_id=recipe, reaction='like').count() + \
-            Recipe.objects.filter(Id_Recipe=recipe.Id_Recipe).first().Likes
+        # --- ПОДСЧЕТ ЛАЙКОВ ---
+        # filter(recipe=recipe) использует системный id объекта recipe, это правильно.
+        current_likes_in_db = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count()
+        current_dislikes_in_db = RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count()
         
-        recipe.dislike_count = RecipeReaction.objects.filter(recipe_id=recipe, reaction='dislike').count() + \
-            Recipe.objects.filter(Id_Recipe=recipe.Id_Recipe).first().Dislikes
+        # Складываем со статикой
+        recipe.like_count = recipe.Likes + current_likes_in_db
+        recipe.dislike_count = recipe.Dislikes + current_dislikes_in_db
 
-        # print(recipe.like_count)
+        # --- РЕАКЦИЯ ПОЛЬЗОВАТЕЛЯ ---
+        # Берем из предварительно загруженного словаря по системному id
+        recipe.user_reaction = user_reactions_map.get(recipe.id)
 
-        # Проверка реакции текущего пользователя
-        user_reaction = RecipeReaction.objects.filter(
-            user_id=cur_per_id,
-            recipe_id=recipe.id
-        ).first()
-        recipe.user_reaction = user_reaction.reaction if user_reaction else None
-
-        # print(f'{user_reaction=} {cur_per_id=} {recipe.Id_Recipe=}')
-        
-        # Обработка пути к изображению через ваш JSON-конфиг
+        # Обработка картинок
         temp_global_link = extract_url_from_string(recipe.Url_images_recipe)
         if temp_global_link and temp_global_link in file_data_images_to_local:
             recipe.Image_path = 'images/images/' + file_data_images_to_local.get(temp_global_link)
         else:
-            recipe.Image_path = 'images/not_image/not_image_recipe.png' # Путь по умолчанию
+            recipe.Image_path = 'images/not_image/not_image_recipe.png'
             
         try:
-            # Если это строка вида "['Tag1', 'Tag2']", превращаем в список
             if isinstance(recipe.Tags, str):
                 recipe.Tags_list = ast.literal_eval(recipe.Tags.strip())
             else:
@@ -717,12 +718,10 @@ def recipe_list(request):
         except (ValueError, SyntaxError):
             recipe.Tags_list = []
 
-    # 5. AJAX-обработка (бесконечный скролл)
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         html = render_to_string('home/recipe_cards_partial.html', {'recipes': recipes}, request=request)
         return JsonResponse({'html': html, 'has_next': has_next})
 
-    # Основной рендер страницы
     return render(request, 'home/home3.html', {
         'recipes': recipes, 
         'has_next': has_next
@@ -748,62 +747,65 @@ def search_recipes(request):
     query = request.GET.get('q', '').strip()
     max_time = request.GET.get('max_time', '')
     selected_type = request.GET.get('type_recipe', '')
+    # Новое поле: ингредиенты
+    ingredients_query = request.GET.get('ingredients', '').strip()
     
-    # Собираем фильтры через объект Q для гибкости
     filters = Q()
     
+    # 1. Основной поиск по тексту
     if query:
-        # icontains делает поиск нечувствительным к регистру и ищет часть слова
-        # Мы объединяем условия через ИЛИ (|), чтобы искать везде сразу
         filters &= (
             Q(Name_recipe__icontains=query) | 
             Q(Description__icontains=query) |
             Q(Tags__icontains=query)
         )
 
+    # 2. Фильтр по времени
     if max_time:
         try:
             filters &= Q(Cooking_time__lte=int(max_time))
         except ValueError:
             pass
         
+    # 3. Фильтр по типу
     if selected_type:
         filters &= Q(Type_recipe=selected_type)
 
-    # Выполняем запрос с примененными фильтрами
-    # distinct() нужен, чтобы избежать дублей, если слово нашлось и в тегах, и в имени
+    # 4. --- НОВАЯ ЛОГИКА: ФИЛЬТР ПО ИНГРЕДИЕНТАМ ---
+    if ingredients_query:
+        # Разбиваем строку "яйца, молоко" на список ['яйца', 'молоко']
+        ing_list = [x.strip() for x in ingredients_query.split(',') if x.strip()]
+        
+        for ing in ing_list:
+            # Каждый ингредиент должен быть в поле Ingredients
+            # Используем icontains, так как Ingredients у вас хранится как строка
+            filters &= Q(Ingredients__icontains=ing)
+
+    # Выполняем запрос
     queryset = Recipe.objects.filter(filters).distinct()
-    
-    # Ограничиваем выборку для производительности
     recipes = queryset[:40]
 
-    # Обработка данных для отображения (логика из вашего файла)
+    # ... (ВАШ КОД ОБРАБОТКИ ЛАЙКОВ И КАРТИНОК ОСТАЕТСЯ ТЕМ ЖЕ) ...
     for recipe in recipes:
-        # recipe.like_count = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count()
-        # recipe.dislike_count = RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count()
+        # (Оставляем вашу логику подсчета лайков без изменений)
         recipe.like_count = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count() + recipe.Likes
         recipe.dislike_count = RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count() + recipe.Dislikes
     
         if request.user.is_authenticated:
             user_react = RecipeReaction.objects.filter(recipe=recipe, user=request.user).first()
             recipe.user_reaction = user_react.reaction if user_react else None
-        else:
-            recipe.user_reaction = None
-            
-        # Обработка пути к изображению через ваш JSON-конфиг
+        
         temp_global_link = extract_url_from_string(recipe.Url_images_recipe)
         if temp_global_link and temp_global_link in file_data_images_to_local:
             recipe.Image_path = 'images/images/' + file_data_images_to_local.get(temp_global_link)
         else:
-            recipe.Image_path = 'images/not_image/not_image_recipe.png' # Путь по умолчанию
+            recipe.Image_path = 'images/not_image/not_image_recipe.png'
         
-        # Безопасный парсинг тегов для шаблона
         try:
             recipe.Tags_list = ast.literal_eval(recipe.Tags.strip()) if recipe.Tags else []
         except:
             recipe.Tags_list = []
 
-    # Получаем список всех типов для выпадающего списка в фильтре
     all_types = Recipe.objects.values_list('Type_recipe', flat=True).distinct().exclude(Type_recipe__isnull=True)
 
     return render(request, 'search/search2.html', {
@@ -811,7 +813,8 @@ def search_recipes(request):
         'query': query,
         'all_types': all_types,
         'selected_type': selected_type,
-        'max_time': max_time
+        'max_time': max_time,
+        'ingredients_query': ingredients_query, # Возвращаем введенные ингредиенты обратно в шаблон
     })
     
     

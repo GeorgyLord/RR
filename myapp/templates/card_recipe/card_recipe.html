@@ -248,12 +248,12 @@
                     <div class="reaction-buttons mt-4 mb-4">
                         <button class="button_like btn {% if user_reaction == 'like' %}active{% endif %}"
                                 data-recipe-id="{{ recipe.0.Id_Recipe }}" data-action="like" onclick="toggleReaction(this)">
-                            <i class="fas fa-thumbs-up"></i> <span class="like-count">{{ recipe.0.Likes|default:0 }}</span>
+                            <i class="fas fa-thumbs-up"></i> <span class="like-count">{{ count_liks |default:0 }}</span>
                         </button>
 
                         <button class="button_dislike btn {% if user_reaction == 'dislike' %}active{% endif %}"
                                 data-recipe-id="{{ recipe.0.Id_Recipe }}" data-action="dislike" onclick="toggleReaction(this)">
-                            <i class="fas fa-thumbs-down"></i> <span class="dislike-count">{{ recipe.0.Dislikes|default:0 }}</span>
+                            <i class="fas fa-thumbs-down"></i> <span class="dislike-count">{{ count_disliks|default:0 }}</span>
                         </button>
                     </div>
                 </div>
