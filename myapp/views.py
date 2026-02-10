@@ -499,45 +499,52 @@ def reg(request):
         email_input = request.POST.get('email_input')
         password_input = request.POST.get('password_input')
 
-        # Проверяем данные
         errors = []
 
-        # if not name_input:
-        #     errors.append("Имя обязательно")
-        # if not email_input:
-        #     errors.append("Email обязателен")
-        # if len(password_input) < 6:
-        #     errors.append("Пароль должен быть не менее 6 символов")
+        # 1. Проверка: Существует ли уже такой логин?
+        if CustomUser.objects.filter(username=name_input).exists():
+            errors.append("Пользователь с таким именем уже существует")
 
-        # Если есть ошибки
-        # if errors:
-        #     # Возвращаем шаблон с сохраненными данными и ошибками
-        #     return render(request, 'registration/registration.html', {
-        #         'errors': errors,
-        #         'name_input': name_input,  # Возвращаем введенные данные
-        #         'email_input': email_input,
-        #         # password обычно не возвращают из соображений безопасности
-        #     })
+        # 2. Проверка: Существует ли уже такой email? (Опционально, но рекомендуется)
+        if CustomUser.objects.filter(email=email_input).exists():
+            errors.append("Этот Email уже зарегистрирован")
 
-        # Если все ок - продолжаем обработку
-        print(f'[!] {name_input=}\n[!] {email_input=}\n[!] {password_input=}')
-        # ... сохранение в БД
-        CustomUser()
-        new_user = CustomUser.objects.create_user(
-            username=name_input,
-            email=email_input,
-            password=password_input
-        )
-        new_user.save()
-        # new_user.set_password(password_input)
-        # new_user.save()
-        print('[!] Новый пользователь создан!')
-        return redirect('/login')
+        # 3. Если есть ошибки, возвращаем их на страницу регистрации
+        if errors:
+            return render(request, 'registration/registration.html', {
+                'errors': errors,
+                'name_input': name_input,   # Возвращаем введенные данные, чтобы не вводить заново
+                'email_input': email_input,
+            })
+
+        try:
+            # 4. Создание пользователя
+            # Примечание: create_user автоматически хеширует пароль и сохраняет объект
+            new_user = CustomUser.objects.create_user(
+                username=name_input,
+                email=email_input,
+                password=password_input
+            )
+            
+            # Строка new_user.save() не нужна, create_user уже сохранил его
+            
+            print('[!] Новый пользователь создан!')
+            messages.success(request, 'Регистрация прошла успешно! Теперь войдите.')
+            return redirect('/login')
+            
+        except Exception as e:
+            # Если произошла другая ошибка базы данных
+            return render(request, 'registration/registration.html', {
+                'errors': [f"Ошибка регистрации: {str(e)}"],
+                'name_input': name_input,
+                'email_input': email_input,
+            })
 
     # GET запрос - пустая форма
     return render(request, 'registration/registration.html', {
         'name_input': '',
         'email_input': '',
+        'errors': []
     })
 
 
