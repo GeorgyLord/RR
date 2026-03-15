@@ -25,7 +25,7 @@ urlpatterns = [
     
     # path('', views.csv_display_view),
     path('test', views.test),
-    path('', views.recipe_list, name='recipe_list'), # recipe_list или home_index
+    path('', views.recipe_list, name='recipe_list'),
     path('whoami', views.whoami, name='whoami'),
     path("recipe/<int:id>", views.card),
     path('admin/', admin.site.urls),

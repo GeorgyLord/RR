@@ -143,7 +143,4 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 AUTH_USER_MODEL = 'myapp.CustomUser'  # Указываем кастомную модель
 
-# AUTHENTICATION_BACKENDS = {
-#     'myapp.backends.EmailOrUsernameBackend',  # твой кастомный
-#     'django.contrib.auth.backends.ModelBackend',  # стандартный (на всякий случай)
-# }
+

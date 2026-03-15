@@ -44,7 +44,7 @@
         .fridge-toggle input { margin-right: 8px; accent-color: #ff6b6b; transform: scale(1.2); }
         .fridge-toggle span { color: #d63031; font-weight: 600; font-size: 0.9rem; }
         
-        /* Сетка и карточки (Ваши стили) */
+        /* Сетка и карточки */
         .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
         .card { background-color: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; }
         .card-image-wrapper { width: 100%; height: 220px; overflow: hidden; }
@@ -142,7 +142,7 @@
     </main>
 
     <script>
-        // --- 1. Работа с LocalStorage и формой ---
+        //  Работа с LocalStorage и формой 
         const STORAGE_KEY = 'my_fridge_ingredients';
         const checkbox = document.getElementById('useFridgeCheckbox');
         const hiddenInput = document.getElementById('hiddenIngredients');
@@ -180,7 +180,7 @@
             });
         });
 
-        // --- 2. Стандартные функции (CSRF, Лайки) ---
+        //  Стандартные функции (CSRF, Лайки) 
         function getCookie(name) { /* (Ваша функция getCookie) */ return null; }
         
         function toggleReaction(button) {

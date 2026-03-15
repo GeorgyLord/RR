@@ -8,7 +8,7 @@
     <title>Поиск рецептов</title>
     <meta name="csrf-token" content="{{ csrf_token }}">
     <style>
-        /* ======================== ОБЩИЕ СТИЛИ (ИЗ HOME3.HTML) ======================== */
+        /* ======================== ОБЩИЕ СТИЛИ ======================== */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -139,7 +139,7 @@
             margin-left: auto;
         }
 
-        /* ======================== СЕТКА КАРТОЧЕК (КОПИЯ HOME3) ======================== */
+        /* ======================== СЕТКА КАРТОЧЕК ======================== */
         .cards {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -200,7 +200,7 @@
             margin-top: 10px;
         }
 
-        /* ======================== КНОПКИ РЕАКЦИЙ (КОПИЯ HOME3) ======================== */
+        /* ======================== КНОПКИ РЕАКЦИЙ ======================== */
         .reaction-buttons {
             display: flex;
             justify-content: space-between;
@@ -360,7 +360,7 @@
     </main>
 
     <script>
-        // --- 1. Функция для получения CSRF-токена из куки ---
+        //  Функция для получения CSRF-токена из куки 
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -376,7 +376,7 @@
             return cookieValue;
         }
 
-        // --- 2. Функция обработки реакции (лайк/дизлайк) ---
+        //   Функция обработки реакции (лайк/дизлайк) 
         function toggleReaction(button) {
             const recipeId = button.getAttribute('data-recipe-id');
             const action = button.getAttribute('data-action');

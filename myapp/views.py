@@ -1,12 +1,16 @@
-import csv
+'''
+МОДУЛЬ ГЛАВНОЙ ЛОГИКИ СИСТЕМЫ
+'''
+
+# import csv
 import os
 from django.conf import settings
-from django.http import HttpResponse
+# from django.http import HttpResponse
 from collections import defaultdict
 import hashlib
 import uuid
-import pandas as pd
-from django.template import loader
+# import pandas as pd
+# from django.template import loader
 # from test_10_best import start_fun
 # from SystemRecomendation_3 import get_recommendations_for_user
 # from SystemRecomendation_5 import get_recommendations_for_user
@@ -16,9 +20,9 @@ import ast
 import json
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate
-from django.db.models.functions import Lower
+# from django.db.models.functions import Lower
 from django.contrib import messages
-from .forms import RegisterForm, LoginForm
+# from .forms import RegisterForm, LoginForm
 from .models import RecipeReaction, Recipe
 from .models import CustomUser
 from django.views.decorators.csrf import csrf_exempt
@@ -26,16 +30,16 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Count
 from django.http import JsonResponse
-from django.db.models import Case, When, Value, IntegerField
+# from django.db.models import Case, When, Value, IntegerField
 from django.template.loader import render_to_string
 from .forms import RecipeForm
 # from .models import MyUser
 from django.db.models import Max
 
 
-class MyUser():
-    def __init__(self):
-        pass
+# class MyUser():
+#     def __init__(self):
+#         pass
 
 # cur_per_id = 71
 # tdf = start_fun(cur_per_id, 10)
@@ -86,8 +90,7 @@ def extract_url_from_string(data_string):
 
 def extract_data_from_string_2(data_string, single_item=True):
     """
-    Безопасно парсит строку вида "[['0', 'данные1'], ['1', 'данные2'], ...]" 
-    и извлекает данные.
+    Безопасно парсит строку вида "[['0', 'данные1'], ['1', 'данные2'], ...]" и извлекает данные.
     
     Args:
         data_string (str): Строка для парсинга
@@ -142,10 +145,6 @@ def settings_page(request):
     
     # Получаем реакции сразу с загруженными рецептами
     user_reactions = RecipeReaction.objects.filter(user=user).select_related('recipe')
-
-    # --- ИСПРАВЛЕНИЕ ОШИБКИ ЗДЕСЬ ---
-    # Мы берем объект рецепта напрямую из связи (reaction.recipe), 
-    # а не ищем его заново по ID, путая id и Id_Recipe.
     
     liked_recipes = [
         reaction.recipe for reaction in user_reactions if reaction.reaction == 'like'
@@ -184,14 +183,6 @@ def settings_page(request):
     }
     return render(request, 'settings/settings.html', context)
 
-# def index(request):
-#     import test_10_best
-#     index_person = int(request.GET.get('user_id', 270))
-#     count_top = int(request.GET.get('top', 5))
-#     print(index_person, count_top)
-#     df = test_10_best.start_fun(n=index_person, top=count_top)
-#     # return render(request, 'a.html')
-#     return HttpResponse(df.to_html())
 
 # @login_required
 def card(request, id):
@@ -274,59 +265,12 @@ def card(request, id):
     # Передаем user_reaction в контекст
     return render(request, 'card_recipe/card_recipe.html', {
         "recipe": current_recipe, 
-        "user_reaction": user_reaction,  # <--- ВОТ ЧТОГО НЕ ХВАТАЛО
+        "user_reaction": user_reaction,
         "count_liks":RecipeReaction.objects.filter(recipe=recipe_obj, reaction='like').count()+current_recipe.first().Likes,
         "count_disliks":RecipeReaction.objects.filter(recipe=recipe_obj, reaction='dislike').count()+current_recipe.first().Dislikes,
     })
     
-    
-    
-    # card_recipe
-    
-    # template = loader.get_template('b.html')
-    # df = pd.read_csv('dataset/data.csv')
-    # df_id = df[df['id'] == id].iloc[0]
-    # context = df_id.to_dict()
-    # if context["Images_recipe"] != '[]':
-    #     context['Images_recipe'] = ast.literal_eval(
-    #         context['Images_recipe'])[0][1]
-    #     # temp_image_recipe = context['Images_recipe']
-    #     # print(df['id'])
-    #     local_link = file_data_images_to_local.get(context['Images_recipe'])
-    #     # print(local_link)
-    #     if local_link != None:
-    #         context['Images_recipe'] = 'images/images/'+local_link
-    #     else:
-    #         context['Images_recipe'] = 'images/not_image/not_image_recipe.png'
-    # else:
-    #     context['Images_recipe'] = 'images/not_image/not_image_recipe.png'
-    # print('[!!]', ast.literal_eval(context['Images_recipe'])[0][1])
-    # context = {
-    #     'Name_recipe': df_id['Name_recipe'].iloc[0],
-    #     'Description': df_id['Description'].iloc[0],
-    #     "Author": df_id['Author'].iloc[0],
-    #     "Cooking_time": df_id['Cooking_time'].iloc[0],
-    #     "Likes": df_id['Likes'].iloc[0],
-    #     "Dislikes": df_id['Dislikes'].iloc[0],
-    #     "Safes": df_id['Safes'].iloc[0],
-    #     'Type_recipe': df_id['Type_recipe'].iloc[0],
-    #     'Tags': df_id['Tags'].iloc[0],
-    #     'Count_ingredients': df_id['Count_ingredients'].iloc[0],
-    #     'Ingredients': df_id['Ingredients'].iloc[0],
-    #     'Pontions': df_id['Pontions'].iloc[0],
-    #     'Calorie_content': df_id['Calorie_content'].iloc[0],
-    #     'Squirrels': df_id['Squirrels'].iloc[0],
-    #     'Fats': df_id['Fats'].iloc[0],
-    #     'Carbohydrates': df_id['Carbohydrates'].iloc[0],
-    #            }
-    # return HttpResponse(template.render(context, request))
-    # return HttpResponse(f"<h1>Имя: {name}</h1>")
 
-# def card(request):
-#     return render(request, 'b.html')
-#     template = loader.get_template('myapp/templates/b.html')
-#     context = {'message': 'Привет, мир!'}
-#     return HttpResponse(template.render(context, request))
 
 
 def home(request):
@@ -334,26 +278,6 @@ def home(request):
 
 
 def whoami(request):
-    # Получаем user_id из сессии
-    # user_id = request.session.get('user_id')
-
-    # # Получаем пользователя или None
-    # user = None
-    # if user_id:
-    #     try:
-    #         user = MyUser.objects.get(id=user_id)
-    #     except MyUser.DoesNotExist:
-    #         # Если пользователь не найден, очищаем сессию
-    #         request.session.flush()
-
-    # # Передаем в контекст
-    # context = {
-    #     'user': user,  # Полный объект пользователя или None
-    #     'user_id': user.id if user else None,  # Только ID или None
-    #     'is_authenticated': user is not None,  # Флаг авторизации
-    #     'username': user.username if user else 'Гость',  # Имя или "Гость"
-    #     'email': user.email if user else '',
-    # }
 
     # user = request.user.is_authenticated
     context = {}
@@ -370,39 +294,6 @@ def whoami(request):
 def logout_page(request):
     if request.user.is_authenticated:
         logout(request)
-
-    # Получаем токен из cookies
-    # token = request.COOKIES.get('session_token')
-
-    # Проверяем, есть ли user_id в сессии Django
-    # user_id = request.session.get('user_id')
-    # print(token, user_id)
-    # if user_id and token:
-    #     try:
-    #         # Находим пользователя
-    #         user = MyUser.objects.get(id=user_id)
-    #         print('пользователь найден')
-    #         # Проверяем валидность сессии (опционально, но рекомендуется)
-    #         if user.validate_session(token):
-    #             user.logout()  # Вызываем метод logout модели
-
-        # Если хотите строгую проверку, можно сделать так:
-        # if user.session_token == token:
-        #     user.logout()
-
-        # except MyUser.DoesNotExist:
-        #     pass  # Пользователь не найден, ничего не делаем
-
-    # Очищаем сессию Django
-    # request.session.flush()
-
-    # Создаем ответ и удаляем куки
-    # response = redirect('login')  # Перенаправляем на страницу входа
-    # response.delete_cookie('session_token')
-
-    # Если у вас есть другие куки для сессии, удалите их тоже:
-    # response.delete_cookie('session_id')
-    # response.delete_cookie('remember_me')
 
     return redirect('/login')
 
@@ -600,7 +491,6 @@ def handle_reaction(request):
 
 @require_POST
 @login_required
-# @csrf_exempt # ВНИМАНИЕ: Для продакшена лучше использовать CSRF-токен в JS, а не @csrf_exempt
 def react_to_recipe(request):
     # print(11)
     """Обрабатывает AJAX-запросы на лайк/дизлайк рецепта."""
@@ -697,7 +587,7 @@ def recipe_list(request):
 
     # Обработка рецептов
     for recipe in recipes:
-        # --- ПОДСЧЕТ ЛАЙКОВ ---
+        # ПОДСЧЕТ ЛАЙКОВ
         # filter(recipe=recipe) использует системный id объекта recipe, это правильно.
         current_likes_in_db = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count()
         current_dislikes_in_db = RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count()
@@ -706,7 +596,7 @@ def recipe_list(request):
         recipe.like_count = recipe.Likes + current_likes_in_db
         recipe.dislike_count = recipe.Dislikes + current_dislikes_in_db
 
-        # --- РЕАКЦИЯ ПОЛЬЗОВАТЕЛЯ ---
+        # РЕАКЦИЯ ПОЛЬЗОВАТЕЛЯ
         # Берем из предварительно загруженного словаря по системному id
         recipe.user_reaction = user_reactions_map.get(recipe.id)
 
@@ -741,12 +631,6 @@ def test(request):
     print(type(recipes), recipes)
     return render(request, 'test/test.html', {'data': recipes})
 
-    # {% for article in data %}
-    # {{ article.Id_Recipe }}
-    # {{ article.Name_recipe }}
-    # {{ article.URL }}
-    # {% endfor %}
-
 
 
 
@@ -759,7 +643,7 @@ def search_recipes(request):
     
     filters = Q()
     
-    # 1. Основной поиск по тексту
+    # Основной поиск по тексту
     if query:
         filters &= (
             Q(Name_recipe__icontains=query) | 
@@ -767,18 +651,18 @@ def search_recipes(request):
             Q(Tags__icontains=query)
         )
 
-    # 2. Фильтр по времени
+    # Фильтр по времени
     if max_time:
         try:
             filters &= Q(Cooking_time__lte=int(max_time))
         except ValueError:
             pass
         
-    # 3. Фильтр по типу
+    # Фильтр по типу
     if selected_type:
         filters &= Q(Type_recipe=selected_type)
 
-    # 4. --- НОВАЯ ЛОГИКА: ФИЛЬТР ПО ИНГРЕДИЕНТАМ ---
+    # ФИЛЬТР ПО ИНГРЕДИЕНТАМ
     if ingredients_query:
         # Разбиваем строку "яйца, молоко" на список ['яйца', 'молоко']
         ing_list = [x.strip() for x in ingredients_query.split(',') if x.strip()]
@@ -792,7 +676,6 @@ def search_recipes(request):
     queryset = Recipe.objects.filter(filters).distinct()
     recipes = queryset[:40]
 
-    # ... (ВАШ КОД ОБРАБОТКИ ЛАЙКОВ И КАРТИНОК ОСТАЕТСЯ ТЕМ ЖЕ) ...
     for recipe in recipes:
         # (Оставляем вашу логику подсчета лайков без изменений)
         recipe.like_count = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count() + recipe.Likes
@@ -863,7 +746,7 @@ def add_recipe_page(request):
                 if not os.path.exists(save_dir):
                     os.makedirs(save_dir)
 
-                # --- 1. ЗАГРУЗКА JSON (Один раз в начале) ---
+                # ЗАГРУЗКА JSON (Один раз в начале)
                 local_images_map = {}
                 if os.path.exists(json_path):
                     try:
@@ -892,12 +775,12 @@ def add_recipe_page(request):
                     local_images_map[random_name] = hashed_name
                     return random_name
 
-                # --- 2. ID RECIPE ---
+                # ID RECIPE
                 max_id_dict = Recipe.objects.aggregate(Max('Id_Recipe'))
                 max_id = max_id_dict['Id_Recipe__max']
                 recipe.Id_Recipe = 0 if max_id is None else int(max_id) + 1
 
-                # --- 3. ГЛАВНОЕ ФОТО ---
+                # ГЛАВНОЕ ФОТО
                 main_image = request.FILES.get('main_image')
                 main_img_name = process_image(main_image)
                 
@@ -908,7 +791,7 @@ def add_recipe_page(request):
                     recipe.Url_images_recipe = "[]"
                     recipe.Images_recipe = "[]" # Оставляем пустым или заполняем по желанию
 
-                # --- 4. ШАГИ ПРИГОТОВЛЕНИЯ (ТЕКСТ + ФОТО) ---
+                # ШАГИ ПРИГОТОВЛЕНИЯ ТЕКСТ + ФОТО
                 steps_json = request.POST.get('steps', '[]')
                 
                 formatted_steps_text = []   # Для Steps_text
@@ -916,7 +799,7 @@ def add_recipe_page(request):
                 
                 try:
                     steps_data = json.loads(steps_json)
-                    step_write_index = 0 # Индекс, который пойдет в БД (0, 1, 2...)
+                    step_write_index = 0 # Индекс, который пойдет в БД (0, 1, 2 и др)
                     
                     for step in steps_data:
                         text = step.get('text', '').strip()
@@ -924,10 +807,10 @@ def add_recipe_page(request):
                         step_id_from_js = step.get('stepId') 
                         
                         if text:
-                            # 1. Текст
+                            # Текст
                             formatted_steps_text.append([str(step_write_index), text])
                             
-                            # 2. Картинка
+                            # Картинка
                             # Ищем файл с именем step_image_{ID_из_JS}
                             img_key = f"step_image_{step_id_from_js}"
                             step_file = request.FILES.get(img_key)
@@ -949,11 +832,11 @@ def add_recipe_page(request):
                     recipe.Steps_text = "[]"
                     recipe.Url_steps_images = "[]"
 
-                # --- 5. СОХРАНЕНИЕ JSON (Один раз в конце) ---
+                # СОХРАНЕНИЕ JSON
                 with open(json_path, 'w', encoding='utf-8') as f:
                     json.dump(local_images_map, f, ensure_ascii=False, indent=4)
 
-                # --- 6. ОСТАЛЬНЫЕ ПОЛЯ ---
+                # ОСТАЛЬНЫЕ ПОЛЯ
                 # Tags
                 raw_tags = form.cleaned_data.get('Tags', '')
                 if raw_tags:

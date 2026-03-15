@@ -1,3 +1,8 @@
+"""
+МОДУЛЬ РЕКОМЕНДАЦИИ
+"""
+
+from myapp.models import Recipe, RecipeReaction
 import os
 import sys
 import django
@@ -18,10 +23,9 @@ sys.path.append(project_path)
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myproject.settings')
 django.setup()
 
-from myapp.models import Recipe, RecipeReaction
 
 STOP_INGREDIENTS = {
-    "соль", "сахар", "вода", "перец", "масло", "масло растительное", 
+    "соль", "сахар", "вода", "перец", "масло", "масло растительное",
     "масло подсолнечное", "специи", "зелень"
 }
 
@@ -33,15 +37,17 @@ def normalize_text(text):
     text = re.sub(r"[^а-яa-z\s]", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     # return text
-    
+
     words = text.split()
     return " ".join([stemmer.stem(w) for w in words])
+
 
 def safe_parse(val):
     try:
         return ast.literal_eval(val)
     except:
         return []
+
 
 def preprocess_recipes(df):
     """Подготовка текстовых данных и ингредиентов."""
@@ -56,7 +62,8 @@ def preprocess_recipes(df):
                 flat.append(item)
         return flat
 
-    df["parsed_ingredients"] = df["parsed_ingredients"].apply(flatten_ingredients)
+    df["parsed_ingredients"] = df["parsed_ingredients"].apply(
+        flatten_ingredients)
 
     df["ingredients_str"] = df["parsed_ingredients"].apply(
         lambda lst: " ".join([normalize_text(str(i)) for i in lst])
@@ -68,6 +75,7 @@ def preprocess_recipes(df):
         df["ingredients_str"]
     )
     return df
+
 
 @lru_cache(maxsize=1)
 def build_tfidf():
@@ -85,6 +93,7 @@ def build_tfidf():
     matrix = vectorizer.fit_transform(df["text_blob"])
     return df, matrix
 
+
 def fridge_boost(recipe_ingredients, fridge_items):
     """Расчет бонуса за совпадение ингредиентов из холодильника."""
     if not fridge_items:
@@ -93,11 +102,11 @@ def fridge_boost(recipe_ingredients, fridge_items):
     # Нормализация и фильтрация стоп-слов
     recipe_set = set(normalize_text(str(i)) for i in recipe_ingredients if i)
     fridge_set = set(normalize_text(str(i)) for i in fridge_items if i)
-    
+
     # Убираем "мусор" из расчета пересечений (но не из общего списка)
     meaningful_fridge = fridge_set - STOP_INGREDIENTS
     meaningful_recipe = recipe_set - STOP_INGREDIENTS
-    
+
     # Если в холодильнике только соль/вода, буст не работает
     if not meaningful_fridge:
         return 1.0
@@ -106,29 +115,31 @@ def fridge_boost(recipe_ingredients, fridge_items):
 
     # Если нет совпадений по значимым продуктам -> небольшой штраф (но не убийственный)
     if overlap == 0:
-        return 0.5 
-    
+        return 0.5
+
     # Считаем покрытие именно по значимым продуктам
     ratio = overlap / max(len(meaningful_recipe), 1)
-    
-    # Более мягкая формула: 
+
     # Максимальный буст = 3.0 (если 100% продуктов есть), минимальный = 1.0
     return 1.0 + (ratio * 2.0)
+
 
 def get_recommendations_for_user(user_id, n_top=5, fridge_ingredients=None, randomness=0.2):
     """Основная логика системы рекомендаций."""
     df, tfidf = build_tfidf()
-    
-    # 1. Получаем реакции пользователя
+
+    # Получаем реакции пользователя
     interactions = RecipeReaction.objects.filter(user_id=user_id)
     # Используем Id_Recipe из связанных объектов
-    liked = list(interactions.filter(reaction="like").values_list("recipe__Id_Recipe", flat=True))
-    disliked = list(interactions.filter(reaction="dislike").values_list("recipe__Id_Recipe", flat=True))
-    
+    liked = list(interactions.filter(reaction="like").values_list(
+        "recipe__Id_Recipe", flat=True))
+    disliked = list(interactions.filter(
+        reaction="dislike").values_list("recipe__Id_Recipe", flat=True))
+
     # Привязываем индекс матрицы к полю Id_Recipe
     id_to_idx = {rid: i for i, rid in enumerate(df["Id_Recipe"])}
 
-    # 2. Расчет базового скора (Content-Based)
+    # Расчет базового ретинга (Content-Based)
     if liked:
         vectors = [tfidf[id_to_idx[rid]] for rid in liked if rid in id_to_idx]
         if vectors:
@@ -139,39 +150,42 @@ def get_recommendations_for_user(user_id, n_top=5, fridge_ingredients=None, rand
         else:
             scores = np.ones(len(df))
     else:
-        scores = np.ones(len(df)) * 0.1 
+        scores = np.ones(len(df)) * 0.1
 
-    # 3. Учет холодильника
+    # Учет холодильника
     if fridge_ingredients:
         boosts = df["parsed_ingredients"].apply(
             lambda x: fridge_boost(x, fridge_ingredients)
         )
-        final_boosts = np.where(boosts.values > 1.0, boosts.values * 2, 0.001)  # boosts.values * 10 - если нужно штрафовать жёстче
+        # boosts.values * 10 - если нужно штрафовать жёстче
+        final_boosts = np.where(boosts.values > 1.0, boosts.values * 2, 0.001)
         scores = scores * final_boosts
 
-    # 4. Штраф за дизлайки
+    # Штраф за дизлайки
     for rid in disliked:
         if rid in id_to_idx:
             scores[id_to_idx[rid]] = 0.0
 
     df["score"] = scores
-    
-    # 5. Фильтрация и Сортировка
+
+    # Фильтрация и Сортировка
     seen = set(liked) | set(disliked)
     # Фильтруем по Id_Recipe
     candidates = df[~df["Id_Recipe"].isin(seen)].copy()
     candidates = candidates.sort_values("score", ascending=False)
 
-    # --- РАСЧЕТ ПОКАЗАТЕЛЕЙ (Абсолютный и Относительный) ---
+    # РАСЧЕТ ПОКАЗАТЕЛЕЙ (Абсолютный и Относительный)
     if not candidates.empty:
         def get_absolute_match(recipe_ing):
-            if not fridge_ingredients: return 0
+            if not fridge_ingredients:
+                return 0
             r_set = set(normalize_text(str(i)) for i in recipe_ing if i)
             f_set = set(normalize_text(str(i)) for i in fridge_ingredients if i)
             intersect = len(r_set & f_set)
             return int((intersect / len(r_set)) * 100) if r_set else 0
 
-        candidates["abs_fridge_match"] = candidates["parsed_ingredients"].apply(get_absolute_match)
+        candidates["abs_fridge_match"] = candidates["parsed_ingredients"].apply(
+            get_absolute_match)
 
         max_s = candidates["score"].max()
         min_s = candidates["score"].min()
@@ -185,60 +199,65 @@ def get_recommendations_for_user(user_id, n_top=5, fridge_ingredients=None, rand
         candidates["abs_fridge_match"] = 0
         candidates["match_percentage"] = 0
 
-    # 6. Рандомизация результатов
+    # Рандомизация результатов
     if randomness > 0 and len(candidates) > n_top:
         n_fixed = int(n_top * (1 - randomness))
         top_part = candidates.iloc[:n_fixed]
-        random_part = candidates.iloc[n_fixed : n_top * 3].sample(n=n_top - n_fixed)
+        random_part = candidates.iloc[n_fixed: n_top *
+                                      3].sample(n=n_top - n_fixed)
         final_df = pd.concat([top_part, random_part])
     else:
         final_df = candidates.head(n_top)
 
-    # 7. Финальная выборка объектов из БД
-    final_ids = final_df["Id_Recipe"].tolist() # Используем Id_Recipe
+    # Финальная выборка объектов из БД
+    final_ids = final_df["Id_Recipe"].tolist()  # Используем Id_Recipe
     rel_map = dict(zip(final_df["Id_Recipe"], final_df["match_percentage"]))
     abs_map = dict(zip(final_df["Id_Recipe"], final_df["abs_fridge_match"]))
-    
+
     if not final_ids:
         return Recipe.objects.none()
-        
+
     # Сохраняем порядок выдачи на основе Id_Recipe
     preserved_order = django.db.models.Case(
         *[django.db.models.When(Id_Recipe=rid, then=pos) for pos, rid in enumerate(final_ids)]
     )
-    
-    results = Recipe.objects.filter(Id_Recipe__in=final_ids).order_by(preserved_order)
-    
+
+    results = Recipe.objects.filter(
+        Id_Recipe__in=final_ids).order_by(preserved_order)
+
     for r in results:
         r.match_score = rel_map.get(r.Id_Recipe, 0)
         r.fridge_match = abs_map.get(r.Id_Recipe, 0)
-        
+
     return results
 
+
 if __name__ == "__main__":
+    # Для теста
     try:
-        TEST_USER_ID = 9 
-        my_fridge = ["картофель", "лук", "курица", "соль", 'лимон', "чеснок", "Молоко", "корица"] 
-        
+        TEST_USER_ID = 9
+        my_fridge = ["картофель", "лук", "курица",
+                     "соль", 'лимон', "чеснок", "Молоко", "корица"]
+
         print(f"\nИСТОРИЯ ПОЛЬЗОВАТЕЛЯ ID {TEST_USER_ID}:")
         reactions = RecipeReaction.objects.filter(user_id=TEST_USER_ID)
         for r in reactions:
-            print(f"{'👍' if r.reaction=='like' else '👎'} {r.recipe.Name_recipe}")
+            print(f"{'👍' if r.reaction == 'like' else '👎'} {r.recipe.Name_recipe}")
 
         print(f'\nХолодильник: {my_fridge}')
         print(f"\nРЕКОМЕНДАЦИИ:")
         recs = get_recommendations_for_user(
-            TEST_USER_ID, 
-            n_top=7, 
+            TEST_USER_ID,
+            n_top=7,
             fridge_ingredients=my_fridge,
             randomness=0.4
         )
-        
+
         for r in recs:
             print(f"[{r.match_score}% Подходит] | "
                   f"[Наличие продуктов: {r.fridge_match}%] | "
                   f"ID_Recipe: {r.Id_Recipe} | {r.Name_recipe}")
-            
+
     except Exception as e:
         import traceback
         traceback.print_exc()

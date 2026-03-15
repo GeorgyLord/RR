@@ -147,7 +147,7 @@
         const STORAGE_KEY = 'my_fridge_ingredients';
         let selected = new Set();
 
-        // 1. При загрузке страницы восстанавливаем данные
+        //  При загрузке страницы восстанавливаем данные
         document.addEventListener('DOMContentLoaded', () => {
             const savedData = localStorage.getItem(STORAGE_KEY);
             if (savedData) {
@@ -166,7 +166,7 @@
             }
         });
 
-        // 2. Переключение ингредиента
+        //  Переключение ингредиента
         function toggleIng(el) {
             const val = el.getAttribute('data-ing');
             if (selected.has(val)) {
@@ -180,12 +180,12 @@
             updateUI();
         }
 
-        // 3. Сохранение в LocalStorage
+        //  Сохранение в LocalStorage
         function saveToStorage() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(selected)));
         }
 
-        // 4. Сброс
+        // Сброс
         function clearSelection() {
             if(!confirm('Очистить весь список продуктов?')) return;
             selected.clear();
@@ -194,7 +194,7 @@
             updateUI();
         }
 
-        // 5. Обновление интерфейса (бар и кнопки)
+        // Обновление интерфейса (бар и кнопки)
         function updateUI() {
             const bar = document.getElementById('selectionBar');
             const findBtn = document.getElementById('findBtn');
@@ -213,14 +213,14 @@
             }
         }
 
-        // 6. Отправка на поиск
+        // Отправка на поиск
         function submitSelection() {
             const query = Array.from(selected).join(',');
             // Используем параметр ingredients, так как мы настроили его во views.py
             window.location.href = `/search?ingredients=${encodeURIComponent(query)}`;
         }
 
-        // 7. Поиск по странице (фильтр чипсов)
+        //  Поиск по странице
         document.getElementById('search').addEventListener('input', function(e) {
             const term = e.target.value.toLowerCase();
             document.querySelectorAll('.letter-block').forEach(block => {
