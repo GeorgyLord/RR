@@ -216,7 +216,6 @@
         // Отправка на поиск
         function submitSelection() {
             const query = Array.from(selected).join(',');
-            // Используем параметр ingredients, так как мы настроили его во views.py
             window.location.href = `/search?ingredients=${encodeURIComponent(query)}`;
         }
 

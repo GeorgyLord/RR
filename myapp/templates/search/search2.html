@@ -9,7 +9,6 @@
     <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"> -->
     <link href="{% static 'css/all.min.css' %}" rel="stylesheet">
     <style>
-        /* (ВАШИ СТАРЫЕ СТИЛИ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ) */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f8f8f8; color: #333; }
         header { width: 100%; height: 60px; background-color: #fff; border-bottom: 1px solid #ddd; display: flex; align-items: center; padding: 0 20px; box-sizing: border-box; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); }
         .nav-links { margin-left: auto; display: flex; gap: 15px; }
@@ -181,7 +180,7 @@
         });
 
         //  Стандартные функции (CSRF, Лайки) 
-        function getCookie(name) { /* (Ваша функция getCookie) */ return null; }
+        function getCookie(name) { return null; }
         
         function toggleReaction(button) {
              const recipeId = button.getAttribute('data-recipe-id');

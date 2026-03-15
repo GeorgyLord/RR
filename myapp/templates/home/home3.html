@@ -272,7 +272,7 @@
     </main>
 
     <script>
-        // --- 1. Надежная функция для получения CSRF-токена ---
+        //  Надежная функция для получения CSRF-токена 
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -288,12 +288,12 @@
             return cookieValue;
         }
 
-        // --- 2. Функция обработки реакции с отладкой ---
+        //  Функция обработки реакции с отладкой 
         function toggleReaction(buttonElement) {
 
-            // --- ПРОВЕРКА КЛИКА (ДЕБАГ) ---
+            //  ПРОВЕРКА КЛИКА (ДЕБАГ) 
             console.log(`[CLICK DEBUG] Button clicked! Recipe ID: ${buttonElement.getAttribute('data-recipe-id')}`);
-            // --- Если вы видите это сообщение, клик зафиксирован. ---
+            //  Если вы видите это сообщение, клик зафиксирован. 
 
             const recipeId = buttonElement.getAttribute('data-recipe-id');
             const action = buttonElement.getAttribute('data-action');
@@ -308,10 +308,10 @@
                 document.querySelector('meta[name="csrf-token"]').getAttribute('content') :
                 getCookie('csrftoken');
 
-            // --- ПРОВЕРКА ТОКЕНА (ДЕБАГ) ---
+            //  ПРОВЕРКА ТОКЕНА (ДЕБАГ) 
             console.log(`[AJAX DEBUG] Sending request to: ${url}`);
             console.log(`[AJAX DEBUG] CSRF Token: ${csrftoken ? 'Present' : 'MISSING! (Check if you are logged in)'}`);
-            // --- Если токен MISSING, проверьте вход или настройки Django ---
+            //  Если токен MISSING, проверьте вход или настройки Django 
 
             fetch(url, {
                 method: 'POST',

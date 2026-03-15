@@ -104,7 +104,7 @@ def extract_data_from_string_2(data_string, single_item=True):
         return None if single_item else []
 
     try:
-        # Шаг 1: Парсинг строки в список Python
+        # Парсинг строки в список Python
         parsed_list = ast.literal_eval(data_string)
         
         # Проверяем что получили список списков
@@ -677,7 +677,6 @@ def search_recipes(request):
     recipes = queryset[:40]
 
     for recipe in recipes:
-        # (Оставляем вашу логику подсчета лайков без изменений)
         recipe.like_count = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count() + recipe.Likes
         recipe.dislike_count = RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count() + recipe.Dislikes
     
