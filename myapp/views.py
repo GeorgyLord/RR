@@ -392,15 +392,15 @@ def reg(request):
 
         errors = []
 
-        # 1. Проверка: Существует ли уже такой логин?
+        # Проверка: Существует ли уже такой логин?
         if CustomUser.objects.filter(username=name_input).exists():
             errors.append("Пользователь с таким именем уже существует")
 
-        # 2. Проверка: Существует ли уже такой email? (Опционально, но рекомендуется)
+        # Проверка: Существует ли уже такой email? (Опционально, но рекомендуется)
         if CustomUser.objects.filter(email=email_input).exists():
             errors.append("Этот Email уже зарегистрирован")
 
-        # 3. Если есть ошибки, возвращаем их на страницу регистрации
+        # Если есть ошибки, возвращаем их на страницу регистрации
         if errors:
             return render(request, 'registration/registration.html', {
                 'errors': errors,
@@ -409,7 +409,7 @@ def reg(request):
             })
 
         try:
-            # 4. Создание пользователя
+            # Создание пользователя
             # Примечание: create_user автоматически хеширует пароль и сохраняет объект
             new_user = CustomUser.objects.create_user(
                 username=name_input,
@@ -510,7 +510,7 @@ def react_to_recipe(request):
         recipe = Recipe.objects.get(Id_Recipe=recipe_id)
         user = request.user
 
-        # 1. Проверяем, существует ли предыдущая реакция
+        # Проверяем, существует ли предыдущая реакция
         existing_reaction = RecipeReaction.objects.filter(
             user=user, recipe=recipe).first()
 
@@ -531,7 +531,7 @@ def react_to_recipe(request):
             reaction = action
 
         # print(RecipeReaction.objects.filter(recipe=recipe, reaction='like').count(), Recipe.objects.filter(Id_Recipe=recipe_id).first().Likes)
-        # 2. Получаем новые счетчики
+        # Получаем новые счетчики
         like_count = RecipeReaction.objects.filter(recipe=recipe, reaction='like').count() + \
             Recipe.objects.filter(Id_Recipe=recipe_id).first().Likes
         dislike_count = RecipeReaction.objects.filter(recipe=recipe, reaction='dislike').count() + \
@@ -560,8 +560,8 @@ def recipe_list(request):
     page = int(request.GET.get('page', 1))
     limit = 10  
     
-    # Получаем рекомендации (QuerySet)
-    recommended_recipes_qs = get_recommendations_for_user(cur_per_id, n_top=50)
+    # Получаем рекомендации (в QuerySet)
+    recommended_recipes_qs = get_recommendations_for_user(cur_per_id, n_top=4000)
 
     # Пагинация
     start_idx = (page - 1) * limit
