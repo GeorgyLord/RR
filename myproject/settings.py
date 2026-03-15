@@ -144,3 +144,4 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 AUTH_USER_MODEL = 'myapp.CustomUser'  # Указываем кастомную модель
 
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = None
